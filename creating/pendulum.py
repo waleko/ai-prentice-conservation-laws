@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import auxiliary_functions as af
+from . import auxiliary_functions as af
 
 
 def single_trajectory(filename: str, params: tuple):
@@ -30,6 +30,6 @@ def create_trajectories(N_traj=200):
     plt.xlabel("theta")
     plt.ylabel("L")
     plt.title("some pendulum trajectories")
-    plt.savefig("../trajectories/pendulum/some_trajectories.png")
+    plt.savefig("trajectories/pendulum/some_trajectories.png")
     af.compute_conserved_quantity("pendulum", "E", energy, N_traj)
     af.normalize("pendulum", N_traj)

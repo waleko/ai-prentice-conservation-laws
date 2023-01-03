@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-import auxiliary_functions as af
+from . import auxiliary_functions as af
 
 
 def energy(state):
@@ -42,7 +42,7 @@ def create_trajectories(N_traj):
         axes[i].set_xlabel("x")
         axes[i].set_ylabel("p")
     axes[1].set_title("some coupled oscillator trajectories\ncolored by objects")
-    plt.savefig("../trajectories/coupled_oscillator/some_trajectories.png")
+    plt.savefig("trajectories/coupled_oscillator/some_trajectories.png")
     af.compute_conserved_quantity("coupled_oscillator", "E", energy)
     af.compute_conserved_quantity("coupled_oscillator", "E1", energy1)
     af.compute_conserved_quantity("coupled_oscillator", "E2", energy2)

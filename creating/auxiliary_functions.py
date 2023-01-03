@@ -32,22 +32,22 @@ def run_and_write(derivative: Callable[[np.ndarray], np.ndarray], state0: np.nda
 def create_multiple_trajectories(name: str, N_trajectories: int, create_single_trajectory: Callable[[str, tuple], None], params: list):
     print("\nCreating trajectories for " + name)
     for i, params_tuple in tqdm(zip(range(N_trajectories), params)):
-        create_single_trajectory("../trajectories/" + name + "/" + str(i) + ".csv", params_tuple)
+        create_single_trajectory("trajectories/" + name + "/" + str(i) + ".csv", params_tuple)
 
 
 def read_traj(name, i):
-    return np.genfromtxt("../trajectories/" + name + "/" + str(i) + ".csv")
+    return np.genfromtxt("trajectories/" + name + "/" + str(i) + ".csv")
 
 
 def compute_conserved_quantity(model_name, quantity_name, quantity, N_traj=200):
     values = np.array([np.vectorize(quantity, signature="(m)->()")(read_traj(model_name, i)).mean() for i in range(N_traj)])
-    np.savetxt("../trajectories/" + model_name + "/" + quantity_name + ".csv", values)
+    np.savetxt("trajectories/" + model_name + "/" + quantity_name + ".csv", values)
 
 
 def normalize(name, N_traj):
     data = np.array([read_traj(name, i) for i in range(N_traj)])
     for traj, i in zip(data / np.abs(data).max(axis=(0, 1)).reshape(1, 1, data.shape[2]), range(N_traj)):
-        np.savetxt("../trajectories/" + name + "/" + str(i) + ".csv", traj)
+        np.savetxt("trajectories/" + name + "/" + str(i) + ".csv", traj)
 
 
 def add_noise(name, N_traj, strength=0.01):
@@ -58,4 +58,4 @@ def add_noise(name, N_traj, strength=0.01):
         return series + np.random.normal(loc=0, scale=scale, size=len(series))
 
     for traj, i in zip(data, range(N_traj)):
-        np.savetxt("../trajectories/" + name + "/" + str(i) + ".csv", np.array([add_noise_to_series(coord) for coord in traj.transpose()]).transpose())
+        np.savetxt("trajectories/" + name + "/" + str(i) + ".csv", np.array([add_noise_to_series(coord) for coord in traj.transpose()]).transpose())

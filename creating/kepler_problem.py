@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from scipy.linalg import norm
 from numpy.random import uniform
 
-import auxiliary_functions as af
+from . import auxiliary_functions as af
 
 
 def create_ellipse(scale, e, theta):
@@ -57,7 +57,7 @@ def create_trajectories(N_traj):
     axes[1].set_xlabel("px")
     axes[1].set_ylabel("py")
     plt.title("some kepler trajectories")
-    plt.savefig("../trajectories/kepler_problem/some_trajectories.png")
+    plt.savefig("trajectories/kepler_problem/some_trajectories.png")
     af.compute_conserved_quantity("kepler_problem", "E", energy, N_traj)
     af.compute_conserved_quantity("kepler_problem", "L", angular_momentum)
     af.normalize("kepler_problem", N_traj)

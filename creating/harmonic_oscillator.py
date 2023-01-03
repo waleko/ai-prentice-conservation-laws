@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import auxiliary_functions as af
+from . import auxiliary_functions as af
 
 
 def single_trajectory(filename: str, params: tuple):
@@ -22,6 +22,6 @@ def create_trajectories(N_traj):
     plt.xlabel("x")
     plt.ylabel("p")
     plt.title("some harmonic oscillator trajectories")
-    plt.savefig("../trajectories/harmonic_oscillator/some_trajectories.png")
+    plt.savefig("trajectories/harmonic_oscillator/some_trajectories.png")
     af.compute_conserved_quantity("harmonic_oscillator", "E", energy, N_traj)
     af.normalize("harmonic_oscillator", N_traj)
