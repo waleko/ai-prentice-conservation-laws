@@ -1,8 +1,5 @@
-from typing import Tuple, List, Optional, Union, Any
-
 import numpy as np
 import matplotlib.pyplot as plt
-from numpy import ndarray
 from sklearn import neighbors
 import scipy
 
