@@ -6,7 +6,7 @@ import pandas as pd
 
 def get_data(experiment_name: str, count: int = 200, sample_size: int = 200, sep: str = ' ',
              n_plotted_trajectories: int = 5,
-             plot_config: Union[List[Tuple[int, int]], None] = None) -> np.ndarray:
+             plot_config: Union[List[Tuple[int, int]], None] = None, start_index: int = 0) -> np.ndarray:
     """
     Gets trajectories data for the experiment
     @param experiment_name:
@@ -19,7 +19,7 @@ def get_data(experiment_name: str, count: int = 200, sample_size: int = 200, sep
     """
     ans = []
     for i in range(count):
-        d = pd.read_csv(f"trajectories/{experiment_name}/{i}.csv", sep=sep, header=None)
+        d = pd.read_csv(f"trajectories/{experiment_name}/{start_index + i}.csv", sep=sep, header=None)
         N = len(d)
         assert N >= sample_size
         # take evenly spaced `sample_size` points
@@ -48,6 +48,7 @@ def get_data(experiment_name: str, count: int = 200, sample_size: int = 200, sep
         fig.show()
     return X
 
+
 def sortby_H(X: np.ndarray, H: Callable[[np.ndarray], float]) -> np.ndarray:
     """
     Sorts data by Hamiltonian. Makes it possible to plot beautiful distance matrices.
@@ -57,3 +58,14 @@ def sortby_H(X: np.ndarray, H: Callable[[np.ndarray], float]) -> np.ndarray:
     """
     Hs = np.array([H(x[0]) for x in X])
     return X[Hs.argsort()]
+
+
+def batch_get_data(experiment_name: str, count: int = 200, sample_size: int = 200, sep: str = ' ',
+                   n_plotted_trajectories: int = 5,
+                   plot_config: Union[List[Tuple[int, int]], None] = None, start_index: int = 0, n_batches: int = 5):
+    res = []
+    for i in range(n_batches):
+        next_plot_config = plot_config if i == 0 else None
+        res.append(get_data(experiment_name, count, sample_size, sep, n_plotted_trajectories, next_plot_config,
+                            start_index + count * i))
+    return np.array(res)

@@ -43,10 +43,12 @@ def spectral_embedding(W: np.ndarray, n_neighbors: int = 20, alpha: float = 1.0,
     eigenvectors = eigenvectors[-2::-1]
     eigenvalues = eigenvalues[-2::-1]
 
+    np.seterr(all="ignore")
     # renormalize
     eigenvectors = (
             np.sqrt(eigenvectors.shape[0]) * eigenvectors / np.linalg.norm(eigenvectors, axis=0)
     )
+    np.seterr()
 
     scores, embed_list = heuristic_score(eigenvalues, eigenvectors, cutoff)
 
@@ -101,3 +103,11 @@ def heuristic_score(evals: np.ndarray, evecs: np.ndarray, cutoff: float, n_neigh
         if score >= cutoff:
             embed_list.append(i)
     return scores, embed_list
+
+
+def batch_spectral_embedding(Ws: np.ndarray, n_neighbors: int = 20, alpha: float = 1.0, cutoff: float = 0.6, do_plot=True,
+                             n_components: int = 20):
+    res = []
+    for W in Ws:
+        res.append(spectral_embedding(W, n_neighbors, alpha, cutoff, False, n_components))
+    return res
