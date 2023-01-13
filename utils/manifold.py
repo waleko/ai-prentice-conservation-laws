@@ -38,17 +38,15 @@ def spectral_embedding(W: np.ndarray, n_neighbors: int = 20, alpha: float = 1.0,
     mean_shift = np.mean(diag / sqrt_norm ** 2)
     np.fill_diagonal(K, 1 - mean_shift)
 
-    eigenvalues, eigenvectors = scipy.sparse.linalg.eigsh(-K, n_components, which="LM", sigma=1.0, v0=None)
+    eigenvalues, eigenvectors = scipy.sparse.linalg.eigsh(-K, k=n_components + 1, which="LM", sigma=1.0, v0=None)
 
-    eigenvectors = eigenvectors[-2::-1]
-    eigenvalues = eigenvalues[-2::-1]
+    eigenvectors = eigenvectors[:, n_components - 1 :: -1] / sqrt_norm[:, None]
+    eigenvalues = eigenvalues[n_components - 1 :: -1]
 
-    np.seterr(all="ignore")
     # renormalize
     eigenvectors = (
             np.sqrt(eigenvectors.shape[0]) * eigenvectors / np.linalg.norm(eigenvectors, axis=0)
     )
-    np.seterr()
 
     scores, embed_list = heuristic_score(eigenvalues, eigenvectors, cutoff)
 
@@ -76,10 +74,11 @@ def heuristic_score(evals: np.ndarray, evecs: np.ndarray, cutoff: float, n_neigh
     n_components = evals.shape[0]
 
     # length scale using log (see Appendix B)
+    relevant_idx = evals > -1
     weights = np.empty_like(evals)
-    weights[evals <= -1] = 0
-    weights[evals > -1] = np.sqrt(
-        np.log(1 + evals[0]) / np.log(1 + evals[evals > -1])
+    weights[~relevant_idx] = 0
+    weights[relevant_idx] = np.sqrt(
+        np.log(1 + evals[0]) / np.log(1 + evals[relevant_idx])
     )
 
     n_trajectories = evecs.shape[0]
