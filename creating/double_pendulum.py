@@ -3,22 +3,36 @@ import matplotlib.pyplot as plt
 from . import auxiliary_functions as af
 
 
-def single_trajectory(filename, params):
-    state0, = params
+def random_state():
+    total_energy = np.random.uniform(-3, 2)
+    kinetic_energy = -1
+    while kinetic_energy < 0:
+        theta1, theta2 = np.random.uniform(-np.pi / 4, np.pi / 4, size=2)
+        kinetic_energy = total_energy + 2 * np.cos(theta1) + np.cos(theta2)
+    kinetic_energy *= (1 + np.sin(theta1 - theta2) ** 2)
+    p2 = np.sqrt(np.random.uniform(0, kinetic_energy / 2))
+    p1 = 2 * p2 * np.cos(theta1 - theta2) + np.sqrt((p2 * np.cos(theta1 - theta2)) ** 2 + kinetic_energy - 2 * p2 ** 2)
+    return [theta1, theta2, p1, p2]
 
+
+def single_trajectory(filename):
     def derivative(state):
         theta1, theta2, ptheta1, ptheta2 = state
         denom = 1 + np.sin(theta1 - theta2) ** 2
+
         theta1dot = (ptheta1 - ptheta2 * np.cos(theta1 - theta2)) / denom
         theta2dot = (2 * ptheta2 - ptheta1 * np.cos(theta1 - theta2)) / denom
+
         h1 = ptheta1 * ptheta2 * np.sin(theta1 - theta2) / denom
         h2 = (ptheta1 ** 2 + 2 * ptheta2 ** 2 - 2 * ptheta1 * ptheta2 * np.cos(theta1 - theta2)) / (2 * denom ** 2)
         h = h1 - h2 * np.sin(2 * (theta1 - theta2))
+
         ptheta1dot = -2 * np.sin(theta1) - h
         ptheta2dot = -np.sin(theta2) + h
+
         return np.array([theta1dot, theta2dot, ptheta1dot, ptheta2dot])
 
-    af.run_and_write(derivative, state0, filename, 0.01, 10000, 1000)
+    af.run_and_write(derivative, random_state, filename, energy, "absolute", 0.1, 100, max_deviation_threshold=0.1)
 
 
 def energy(state):
@@ -35,18 +49,7 @@ def energy12(state, pm):
 
 
 def create_trajectories(N_traj):
-    def single_state():
-        E = np.random.uniform(-3, 2)
-        K = -1
-        while K < 0:
-            theta1, theta2 = np.random.uniform(-np.pi / 4, np.pi / 4, size=2)
-            K = E + 2 * np.cos(theta1) + np.cos(theta2)
-        K *= (1 + np.sin(theta1 - theta2) ** 2)
-        p2 = np.sqrt(np.random.uniform(0, K / 2))
-        p1 = 2 * p2 * np.cos(theta1 - theta2) + np.sqrt((p2 * np.cos(theta1 - theta2)) ** 2 + K - 2 * p2 ** 2)
-        return [theta1, theta2, p1, p2]
-
-    af.create_multiple_trajectories("double_pendulum", N_traj, single_trajectory, zip([single_state() for _ in range(N_traj)]))
+    af.create_multiple_trajectories("double_pendulum", N_traj, single_trajectory)
     af.add_noise("double_pendulum", N_traj)
     plt.figure()
     for i in range(3):

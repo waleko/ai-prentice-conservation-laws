@@ -2,38 +2,41 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.linalg import norm
 from numpy.random import uniform
+from numpy import cos, sin, pi
 
 from . import auxiliary_functions as af
 
 
-def create_ellipse(scale, e, theta):
-    r = scale / (1 + e * np.cos(theta))
-    return np.cos(theta) * r, np.sin(theta) * r
-
-
-def single_trajectory(filename: str, params: tuple):
-    E, L, theta0 = params
-    scale = L ** 2
+def single_trajectory(filename: str):
+    E, L, theta0 = uniform(-2, -1), uniform(0.25, 0.5), uniform(0, 2 * pi)
     e = np.sqrt(1 + 2 * E * L ** 2)
-    theta = 2 * np.pi * uniform(size=200)
-    x, y = create_ellipse(L ** 2, e, theta) 
-    px = -L * np.sin(theta) / scale
-    py = L * (np.cos(theta) + e) / scale
+    random_angles = uniform(0, 2 * pi, size=200)
+    r_arr = L ** 2 / (1 + e * np.cos(random_angles))
+    x_arr = cos(random_angles) * r_arr
+    y_arr = sin(random_angles) * r_arr
+    px_arr = -sin(random_angles) / L
+    py_arr = (cos(random_angles) + e) / L
+    traj = np.stack((x_arr, y_arr, px_arr, py_arr), axis=1)
 
-    def rotate(state, phi):
-        c = np.cos(phi)
-        s = np.sin(phi)
+    def rotate(state):
+        c = np.cos(theta0)
+        s = np.sin(theta0)
         A = np.array([[c, -s, 0,  0],
                       [s,  c, 0,  0],
                       [0,  0, c, -s],
                       [0,  0, s,  c]])
         return A.dot(state)
 
-    np.savetxt(filename, [rotate(el, theta0) for el in np.stack([x, y, px, py]).transpose()])
+    rotate = np.vectorize(rotate, signature="(m)->(m)")
+
+    traj = rotate(traj)
+
+    np.savetxt(filename, traj)
 
 
 def energy(state):
-    return (state[2:] ** 2).sum() / 2 - 1 / norm(state[:2])
+    r, p = state.reshape(2, 2)
+    return (p ** 2).sum() / 2 - 1 / norm(r)
 
 
 def angular_momentum(state):
@@ -41,10 +44,7 @@ def angular_momentum(state):
 
 
 def create_trajectories(N_traj):
-    E = uniform(-2, -1, size=N_traj)
-    L = uniform(0.25, 0.5, size=N_traj)
-    params = zip(E, L, 2 * np.pi * uniform(size=N_traj))
-    af.create_multiple_trajectories("kepler_problem", N_traj, single_trajectory, params)
+    af.create_multiple_trajectories("kepler_problem", N_traj, single_trajectory)
     af.add_noise("kepler_problem", N_traj)
     fig, axes = plt.subplots(1, 2)
     fig.set_size_inches(30, 10)

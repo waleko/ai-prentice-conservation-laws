@@ -2,37 +2,86 @@ import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 import pandas as pd
+from time import time
 
 from typing import Callable
 
 
-def fourth_order_runge_kutta(derivative: Callable[[np.ndarray], np.ndarray], state0: np.ndarray, dt: float=0.01, N_steps: int=1000) -> list:
+def fourth_order_runge_kutta(derivative: Callable[[np.ndarray], np.ndarray],
+                              state0: np.ndarray,
+                              conserved_quantity: Callable[[np.ndarray], float],
+                              deviation_type: str,
+                              T: float,
+                              dt_max: float=0.1,
+                              k: float=1.2,
+                              max_deviation_threshold: float=0.01,
+                              min_deviation_threshold: float=0.0001) -> list:
+    def next_state(cur_state, dt_):
+        k1 = derivative(cur_state)
+        k2 = derivative(cur_state + k1 * dt_ / 2)
+        k3 = derivative(cur_state + k2 * dt_ / 2)
+        k4 = derivative(cur_state + k3 * dt_)
+        return cur_state + (k1 / 6 + k2 / 3 + k3 / 3 + k4 / 6) * dt
+    
+    dt = dt_max
     states = [state0]
-    for _ in range(N_steps):
-        k1 = derivative(states[-1])
-        k2 = derivative(states[-1] + k1 * dt / 2)
-        k3 = derivative(states[-1] + k2 * dt / 2)
-        k4 = derivative(states[-1] + k3 * dt)
-        states.append(states[-1] + (k1 / 6 + k2 / 3 + k3 / 3 + k4 / 6) * dt)
-        if np.allclose(state0, states[-1], atol=dt) and (not np.allclose(state0, states[-2], atol=dt)):
-            break
-    return np.array(states)
+    dt_arr = []
+    start_time = time()
+    while True:
+        while True:
+            if time() - start_time > 5:
+                return None, None
+            deviation_ = deviation(conserved_quantity(states[-1]), conserved_quantity(next_state(states[-1], dt)), deviation_type)
+            if deviation_ > max_deviation_threshold:
+                dt /= k
+            elif deviation_ < min_deviation_threshold and dt < dt_max:
+                dt *= k
+            else:
+                break
+        T -= dt
+        states.append(next_state(states[-1], dt))
+        dt_arr.append(dt)
+        if T < 0:
+            return states, dt_arr
 
 
-def run_and_write(derivative: Callable[[np.ndarray], np.ndarray], state0: np.ndarray, filename: str, dt: float, N_steps: int, max_traj_len: int=200):
-    traj = fourth_order_runge_kutta(derivative, state0, dt, N_steps)
-    if len(traj) > max_traj_len:
-        traj = traj[np.random.choice(np.arange(len(traj)), replace=False, size=max_traj_len)]
-    else:
-        traj = traj[np.random.choice(np.arange(len(traj)), replace=True, size=max_traj_len)]
+def run_and_write(derivative: Callable[[np.ndarray], np.ndarray],
+                   state0_generator: np.ndarray,
+                   filename: str,
+                   conserved_quantity: Callable[[np.ndarray], float],
+                   deviation_type: str,
+                   dt: float,
+                   T: float,
+                   traj_size: int=200,
+                   max_deviation_threshold: float=0.01,
+                   min_deviation_threshold: float=0.0001):
+    traj, dt_arr = fourth_order_runge_kutta(derivative,
+                                             state0_generator(),
+                                             conserved_quantity,
+                                             deviation_type,
+                                             T,
+                                             dt,
+                                             max_deviation_threshold=max_deviation_threshold,
+                                             min_deviation_threshold=min_deviation_threshold)
+    while traj is None:
+        traj, dt_arr = fourth_order_runge_kutta(derivative,
+                                                state0_generator(),
+                                                conserved_quantity,
+                                                deviation_type,
+                                                T,
+                                                dt,
+                                                max_deviation_threshold=max_deviation_threshold,
+                                                min_deviation_threshold=min_deviation_threshold)
+    traj = np.array(traj)
+    i = np.random.choice(np.arange(len(traj) - 1), p=dt_arr / np.sum(dt_arr), size=traj_size)
+    w = np.random.uniform(size=(traj_size, 1))
+    np.savetxt(filename, traj[i] * w + traj[i + 1] * (1 - w))
 
-    np.savetxt(filename, traj)
-
-
-def create_multiple_trajectories(name: str, N_trajectories: int, create_single_trajectory: Callable[[str, tuple], None], params: list):
+    
+def create_multiple_trajectories(name: str, N_trajectories: int, create_single_trajectory: Callable[[str], None]):
     print("\nCreating trajectories for " + name)
-    for i, params_tuple in tqdm(zip(range(N_trajectories), params)):
-        create_single_trajectory("trajectories/" + name + "/" + str(i) + ".csv", params_tuple)
+    for i in tqdm(range(N_trajectories)):
+        create_single_trajectory("trajectories/" + name + "/" + str(i) + ".csv")
 
 
 def read_traj(name, i):
@@ -59,3 +108,10 @@ def add_noise(name, N_traj, strength=0.01):
 
     for traj, i in zip(data, range(N_traj)):
         np.savetxt("trajectories/" + name + "/" + str(i) + ".csv", np.array([add_noise_to_series(coord) for coord in traj.transpose()]).transpose())
+
+
+def deviation(prev_value, new_value, deviation_type):
+    if deviation_type == "absolute":
+        return abs(prev_value - new_value)
+    if deviation_type == "relative":
+        return abs(1 - new_value / prev_value)

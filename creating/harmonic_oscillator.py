@@ -3,17 +3,24 @@ import matplotlib.pyplot as plt
 from . import auxiliary_functions as af
 
 
-def single_trajectory(filename: str, params: tuple):
-    t = 2 * np.pi * np.random.uniform(size=200)
-    np.savetxt(filename, np.stack((np.sin(t), np.cos(t))).transpose() * params[0])
+def random_points_on_unit_circle(size=200):
+    random_angles = 2 * np.pi * np.random.uniform(size=size)
+    return np.stack((np.sin(random_angles), np.cos(random_angles)), axis=1)
+
+
+def single_trajectory(filename: str):
+    r = np.random.uniform(0.1, 1)
+    traj = r * random_points_on_unit_circle()
+    np.savetxt(filename, traj)
 
 
 def energy(state):
-    return (state ** 2).sum() / 2
+    x, p = state
+    return p ** 2 / 2 + x ** 2 / 2
 
 
 def create_trajectories(N_traj):
-    af.create_multiple_trajectories("harmonic_oscillator", N_traj, single_trajectory, zip(np.random.uniform(0.1, 1, size=N_traj)))
+    af.create_multiple_trajectories("harmonic_oscillator", N_traj, single_trajectory)
     af.add_noise("harmonic_oscillator", N_traj)
     plt.figure()
     for i in range(10):

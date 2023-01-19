@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn import neighbors
 import scipy
+import umap
 
 
 def spectral_embedding(W: np.ndarray, n_neighbors: int = 20, alpha: float = 1.0, cutoff: float = 0.6, do_plot=True,
@@ -110,3 +111,15 @@ def batch_spectral_embedding(Ws: np.ndarray, n_neighbors: int = 20, alpha: float
     for W in Ws:
         res.append(spectral_embedding(W, n_neighbors, alpha, cutoff, False, n_components))
     return res
+
+
+def UMAP(W: np.ndarray, n_neighbors: int=20, n_components: int=2):
+    """
+    Calculates embedding using UMAP
+    @param W: distance matrix
+    @param n_neighbors: number of neighbors, UMAP parameter
+    @param n_components: number of components dimestionality of the embedding
+    @return: embedding
+    """
+    model = umap.UMAP(n_components=n_components, metric="precomputed", n_neighbors=n_neighbors)
+    return model.fit_transform(W)
