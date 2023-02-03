@@ -1,32 +1,36 @@
 import numpy as np
-import matplotlib.pyplot as plt
-from . import auxiliary_functions as af
-
-
-def single_trajectory(filename: str):
-    state0_generator = lambda: np.array([0, np.sqrt(np.random.uniform(0.1, 3))])
-
-    def derivative(arr):
-        return np.array([arr[1], -np.sin(arr[0])])
-    
-    af.run_and_write(derivative, state0_generator, filename, energy, "absolute", 0.1, 10)
+from .auxiliary_functions import *
 
 
 def energy(state):
     theta, L = state
-    return L ** 2 / 2 - np.cos(theta)
+    return L ** 2 / 2 - np.cos(theta) + 1
 
 
-def create_trajectories(N_traj=200):
-    af.create_multiple_trajectories("pendulum", N_traj, single_trajectory)
-    af.add_noise("pendulum", N_traj)
-    plt.figure()
-    for i in range(10):
-        traj = af.read_traj("pendulum", i)
-        plt.scatter(np.vectorize(lambda x: x if x < np.pi else x - 2 * np.pi)(traj[:, 0] % (2 * np.pi)), traj[:, 1], s=1)
-    plt.xlabel("theta")
-    plt.ylabel("L")
-    plt.title("some pendulum trajectories")
-    plt.savefig("trajectories/pendulum/some_trajectories.png")
-    af.compute_conserved_quantity("pendulum", "E", energy, N_traj)
-    af.normalize("pendulum", N_traj)
+def create_trajectories(N_traj, normalize=True, save=True):
+    """
+    Creates trajectories of pendulum with different energies. Returns trajectories and energies
+    @param N_traj: number of created trajectories
+    @param normalize: whether to normalize trajectories in a way that maximum absolute value along each coordinate is 1 or not
+    @param save: whether to save trajectories and energies to trajectories/pendulum or not
+    @return data: 3d array containing all created trajectories
+    @return energies: energies of each trajectory
+    """
+    def derivative(arr):
+        return np.array([arr[1], -np.sin(arr[0])])
+
+    state0_generator = lambda: np.array([0, np.sqrt(np.random.uniform(0, 3))])
+
+    data = np.array([generate_traj(derivative, state0_generator, energy, "absolute", 0.1, 10) for _ in tqdm(range(N_traj))])
+    energies = [energy(traj[0]) for traj in data]
+    data = add_noise(data)
+
+    if normalize:
+        data = normalize_data(data)
+
+    if save:
+        for trajectory, i in zip(data, range(N_traj)):
+            np.savetxt("trajectories/pendulum/" + str(i) + ".csv", trajectory)
+        np.savetxt("trajectories/pendulum/energies.csv", energies)
+
+    return data, energies

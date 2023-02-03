@@ -1,8 +1,7 @@
 import numpy as np
 from numpy import cos, sin, sqrt
-import matplotlib.pyplot as plt
-
-from . import auxiliary_functions as af
+from tqdm import tqdm
+from .auxiliary_functions import *
 
 
 def energy(state):
@@ -20,11 +19,10 @@ def energy2(state):
     return (3 * (x1 - x2) ** 2 + (p1 - p2) ** 2) / 4
 
 
-def single_trajectory(filename):
-    E1, E2 = np.random.uniform(0, 1, size=2)
+def single_trajectory(E1, E2):
     A = np.sqrt(E1)
     B = np.sqrt(E2) / 2
-    t = np.random.uniform(0, 100, size=1000)
+    t = np.sort(np.random.uniform(0, 100, size=1000))
     
     x1_arr_mode1 = x2_arr_mode1 = cos(t) * A
     p1_arr_mode1 = p2_arr_mode1 = -sin(t) * A
@@ -41,24 +39,31 @@ def single_trajectory(filename):
 
     traj = np.stack((x1_arr, x2_arr, p1_arr, p2_arr), axis=1)
 
-    np.savetxt(filename, traj)
+    return traj
 
 
-def create_trajectories(N_traj):
-    af.create_multiple_trajectories("coupled_oscillator", N_traj, single_trajectory)
-    af.add_noise("coupled_oscillator", N_traj)
-    fig, axes = plt.subplots(1, 3)
-    fig.set_size_inches(45, 15)
-    for i in range(3):
-        traj = af.read_traj("coupled_oscillator", i)
-        x1, x2, p1, p2 = traj.transpose()
-        axes[i].scatter(x1, p1, s=5)
-        axes[i].scatter(x2, p2, s=5)
-        axes[i].set_xlabel("x")
-        axes[i].set_ylabel("p")
-    axes[1].set_title("some coupled oscillator trajectories\ncolored by objects")
-    plt.savefig("trajectories/coupled_oscillator/some_trajectories.png")
-    af.compute_conserved_quantity("coupled_oscillator", "E", energy)
-    af.compute_conserved_quantity("coupled_oscillator", "E1", energy1)
-    af.compute_conserved_quantity("coupled_oscillator", "E2", energy2)
-    af.normalize("coupled_oscillator", N_traj)
+def create_trajectories(N_traj, normalize=True, save=True):
+    """
+    Creates trajectories of coupled_oscillator with different energies.
+    Returns trajectories and energies of two modes
+    @param N_traj: number of created trajectories
+    @param normalize: whether to normalize trajectories in a way that maximum absolute value along each coordinate is 1 or not
+    @param save: whether to save trajectories and energies to trajectories/coupled_oscillator or not
+    @return data: 3d array containing all created trajectories
+    @return energies1: energies of the first mode for each trajectory
+    @return energies2: energies of the second mode for each trajectory
+    """
+    energies1, energies2 = np.random.uniform(0, 1, size=(2, N_traj))
+    data = np.array([single_trajectory(E1, E2) for E1, E2 in tqdm(zip(energies1, energies2))])
+    data = add_noise(data)
+    
+    if normalize:
+        data = normalize_data(data)
+
+    if save:
+        for trajectory, i in zip(data, range(N_traj)):
+            np.savetxt("trajectories/coupled_oscillator/" + str(i) + ".csv", trajectory)
+        np.savetxt("trajectories/coupled_oscillator/energies1.csv", energies1)
+        np.savetxt("trajectories/coupled_oscillator/energies2.csv", energies2)
+
+    return data, energies1, energies2
