@@ -2,7 +2,6 @@ import numpy as np
 import wasserstein.wasserstein as ws
 from sklearn.neighbors import KDTree
 from tqdm import tqdm
-from numba import jit, types
 
 
 # def sinkhorn_dist_matrix(data: np.ndarray) -> np.ndarray:
