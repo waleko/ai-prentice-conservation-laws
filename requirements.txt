@@ -7,3 +7,6 @@ scipy
 scikit-learn
 umap
 Isomap
+torch
+ipython
+ipywidgets
