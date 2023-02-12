@@ -19,10 +19,10 @@ def energy2(state):
     return (3 * (x1 - x2) ** 2 + (p1 - p2) ** 2) / 4
 
 
-def single_trajectory(E1, E2):
+def single_trajectory(E1, E2, traj_len):
     A = np.sqrt(E1)
     B = np.sqrt(E2) / 2
-    t = np.sort(np.random.uniform(0, 100, size=1000))
+    t = np.sort(np.random.uniform(0, 100, size=traj_len))
     
     x1_arr_mode1 = x2_arr_mode1 = cos(t) * A
     p1_arr_mode1 = p2_arr_mode1 = -sin(t) * A
@@ -42,7 +42,7 @@ def single_trajectory(E1, E2):
     return traj
 
 
-def create_trajectories(N_traj, normalize=True, save=True):
+def create_trajectories(N_traj, traj_len=200, normalize=True, save=True):
     """
     Creates trajectories of coupled_oscillator with different energies.
     Returns trajectories and energies of two modes
@@ -54,7 +54,7 @@ def create_trajectories(N_traj, normalize=True, save=True):
     @return energies2: energies of the second mode for each trajectory
     """
     energies1, energies2 = np.random.uniform(0, 1, size=(2, N_traj))
-    data = np.array([single_trajectory(E1, E2) for E1, E2 in tqdm(zip(energies1, energies2))])
+    data = np.array([single_trajectory(E1, E2, traj_len) for E1, E2 in tqdm(zip(energies1, energies2))])
     data = add_noise(data)
     
     if normalize:

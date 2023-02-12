@@ -3,15 +3,9 @@ import matplotlib.pyplot as plt
 from .auxiliary_functions import *
 
 
-def random_points_on_unit_circle(size=200):
+def random_points_on_unit_circle(size):
     random_angles = np.sort(2 * np.pi * np.random.uniform(size=size))
     return np.stack((np.sin(random_angles), np.cos(random_angles)), axis=1)
-
-
-def single_trajectory(filename: str):
-    r = np.random.uniform(0.1, 1)
-    traj = r * random_points_on_unit_circle()
-    np.savetxt(filename, traj)
 
 
 def energy(state):
@@ -19,7 +13,7 @@ def energy(state):
     return p ** 2 / 2 + x ** 2 / 2
 
 
-def create_trajectories(N_traj, normalize=True, save=True):
+def create_trajectories(N_traj, traj_len=200, normalize=True, save=True):
     """
     Creates trajectories of harmonic oscillator with different energies. Returns trajectories and energies
     @param N_traj: number of created trajectories
@@ -28,7 +22,7 @@ def create_trajectories(N_traj, normalize=True, save=True):
     @return data: 3d array containing all created trajectories
     @return energies: energies of each trajectory
     """
-    N_circles = np.array([random_points_on_unit_circle() for _ in tqdm(range(N_traj))])
+    N_circles = np.array([random_points_on_unit_circle(size=traj_len) for _ in tqdm(range(N_traj))])
     r_arr = np.random.uniform(0, 1, size=(N_traj, 1, 1))
     data = N_circles * r_arr
     energies = r_arr.reshape(N_traj) ** 2 / 2

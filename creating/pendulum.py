@@ -7,7 +7,7 @@ def energy(state):
     return L ** 2 / 2 - np.cos(theta) + 1
 
 
-def create_trajectories(N_traj, normalize=True, save=True):
+def create_trajectories(N_traj, traj_len=200, normalize=True, save=True):
     """
     Creates trajectories of pendulum with different energies. Returns trajectories and energies
     @param N_traj: number of created trajectories
@@ -19,10 +19,10 @@ def create_trajectories(N_traj, normalize=True, save=True):
     def derivative(arr):
         return np.array([arr[1], -np.sin(arr[0])])
 
-    state0_generator = lambda: np.array([0, np.sqrt(np.random.uniform(0, 3))])
+    state0_generator = lambda: np.array([0, np.random.uniform(0.7, 1.3)])
 
-    data = np.array([generate_traj(derivative, state0_generator, energy, "absolute", 0.1, 10) for _ in tqdm(range(N_traj))])
-    energies = [energy(traj[0]) for traj in data]
+    data = np.array([generate_traj(derivative, state0_generator, energy, "absolute", 0.1, 10, traj_len=traj_len) for _ in tqdm(range(N_traj))])
+    energies = np.array([energy(traj[0]) for traj in data])
     data = add_noise(data)
 
     if normalize:

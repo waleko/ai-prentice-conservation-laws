@@ -19,7 +19,7 @@ energy1 = lambda state: energy12(state, 1)
 energy2 = lambda state: energy12(state, -1)
 
 
-def create_trajectories(N_traj, normalize=True, save=True):
+def create_trajectories(N_traj, traj_len=500, normalize=True, save=True):
     """
     Creates trajectories of double pendulum with different energies.
     Returns trajectories, energies and energies of two modes
@@ -48,20 +48,20 @@ def create_trajectories(N_traj, normalize=True, save=True):
         return np.array([theta1dot, theta2dot, ptheta1dot, ptheta2dot])
 
     def state0_generator():
-        total_energy = np.random.uniform(-3, 2)
+        total_energy = np.random.uniform(-3, 0)
         kinetic_energy = -1
         while kinetic_energy < 0:
             theta1, theta2 = np.random.uniform(-np.pi / 4, np.pi / 4, size=2)
             kinetic_energy = total_energy + 2 * np.cos(theta1) + np.cos(theta2)
-        kinetic_energy *= (1 + np.sin(theta1 - theta2) ** 2)
+        kinetic_energy *= (1 + np.sin(theta1 - theta2) ** 2) * 2
         p2 = np.sqrt(np.random.uniform(0, kinetic_energy / 2))
-        p1 = 2 * p2 * np.cos(theta1 - theta2) + np.sqrt((p2 * np.cos(theta1 - theta2)) ** 2 + kinetic_energy - 2 * p2 ** 2)
+        p1 = p2 * np.cos(theta1 - theta2) + np.sqrt((p2 * np.cos(theta1 - theta2)) ** 2 + kinetic_energy - 2 * p2 ** 2)
         return [theta1, theta2, p1, p2]
     
-    data = np.array([generate_traj(derivative, state0_generator, energy, "absolute", 0.1, 100, max_deviation_threshold=0.1) for _ in tqdm(range(N_traj))])
-    energies = [energy(traj[0]) for traj in data]
-    energies1 = [energy1(traj[0]) for traj in data]
-    energies2 = [energy2(traj[0]) for traj in data]
+    data = np.array([generate_traj(derivative, state0_generator, energy, "absolute", 0.1, 100, max_deviation_threshold=0.1, traj_len=traj_len) for _ in tqdm(range(N_traj))])
+    energies = np.array([energy(traj[0]) for traj in data])
+    energies1 = np.array([energy1(traj[0]) for traj in data])
+    energies2 = np.array([energy2(traj[0]) for traj in data])
     data = add_noise(data)
 
     if normalize:

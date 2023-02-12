@@ -108,7 +108,7 @@ def deviation(prev_value, new_value, deviation_type):
         return abs(1 - new_value / prev_value)
 
 
-def add_noise(data, strength=0.01):
+def add_noise(data, strength=0):
     stds = np.std(data, axis=1)
     scales = np.stack([stds] * data.shape[1], axis=1) * strength
     noise = np.random.normal(scale=scales)
