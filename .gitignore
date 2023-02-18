@@ -126,3 +126,9 @@ dmypy.json
 trajectories/*
 
 .idea/
+
+gifs/*.gif
+!gifs/*0.gif
+
+wandb
+lightning_logs
