@@ -6,13 +6,19 @@ from .data_loader import *
 
 class PhysExperiment:
     def __init__(self, experiment_name: str, n_conservation_laws: int, traj_cnt: int = 200, traj_len: int = 1000,
-                 plot_config: Optional[list[tuple[int, int]]] = None, start_index: int = 0):
+                 column_names: Union[List[str], None] = None, plot_config: Optional[list[tuple[int, int]]] = None,
+                 start_index: int = 0):
         self.experiment_name = experiment_name
         self.n_conservation_laws = n_conservation_laws
         self.traj_cnt = traj_cnt
         self.traj_len = traj_len
         self.data = get_data(experiment_name, traj_cnt, traj_len, start_index=start_index)
         self.plot_config = plot_config
+
+        if column_names is None:
+            self.column_names = [f'Component #{x}' for x in range(self.pt_dim)]
+        else:
+            self.column_names = column_names
 
     def single_trajectory(self, random_seed=None):
         np.random.seed(random_seed)
