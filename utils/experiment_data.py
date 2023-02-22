@@ -1,12 +1,12 @@
 import logging
-from typing import Optional
+from typing import Optional, List, Tuple
 
 from .data_loader import *
 
 
 class PhysExperiment:
     def __init__(self, experiment_name: str, n_conservation_laws: int, traj_cnt: int = 200, traj_len: int = 1000,
-                 column_names: Union[List[str], None] = None, plot_config: Optional[list[tuple[int, int]]] = None,
+                 column_names: Union[List[str], None] = None, plot_config: Optional[List[Tuple[int, int]]] = None,
                  start_index: int = 0):
         self.experiment_name = experiment_name
         self.n_conservation_laws = n_conservation_laws
