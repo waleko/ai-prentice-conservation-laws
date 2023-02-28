@@ -5,15 +5,15 @@ from .data_loader import *
 
 
 class PhysExperiment:
-    def __init__(self, experiment_name: str, n_conservation_laws: int, traj_cnt: int = 200, traj_len: int = 1000,
-                 column_names: Union[List[str], None] = None, plot_config: Optional[List[Tuple[int, int]]] = None,
-                 start_index: int = 0):
+    def __init__(self, experiment_name: str, n_conservation_laws: int, data: np.ndarray,
+                 column_names: Union[List[str], None] = None, plot_config: Optional[List[Tuple[int, int]]] = None):
         self.experiment_name = experiment_name
         self.n_conservation_laws = n_conservation_laws
-        self.traj_cnt = traj_cnt
-        self.traj_len = traj_len
-        self.data = get_data(experiment_name, traj_cnt, traj_len, start_index=start_index)
+        self.data = data
         self.plot_config = plot_config
+        self.traj_cnt = data.shape[0]
+        self.traj_len = data.shape[1]
+        self.pt_dim = data.shape[2]
 
         if column_names is None:
             self.column_names = [f'Component #{x}' for x in range(self.pt_dim)]
@@ -47,9 +47,13 @@ class PhysExperiment:
         fig.show()
 
     @property
-    def pt_dim(self):
-        return self.data.shape[-1]
-
-    @property
     def n_eff(self):
         return self.pt_dim - self.n_conservation_laws
+
+
+class CsvPhysExperiment(PhysExperiment):
+    def __init__(self, experiment_name: str, n_conservation_laws: int, traj_cnt: int = 200,
+                 traj_len: int = 1000, column_names: Union[List[str], None] = None,
+                 plot_config: Optional[List[Tuple[int, int]]] = None, start_index: int = 0):
+        data = get_data(experiment_name, traj_cnt, traj_len, start_index=start_index)
+        super().__init__(experiment_name, n_conservation_laws, data, column_names, plot_config)

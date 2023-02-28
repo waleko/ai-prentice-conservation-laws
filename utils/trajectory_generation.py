@@ -6,8 +6,8 @@ import creating.coupled_oscillator as co
 
 
 def generate_all_trajectories(count=200, traj_len=1000):
-    pend.create_trajectories(count, traj_len=traj_len)
-    ho.create_trajectories(count, traj_len=traj_len)
-    kp.create_trajectories(count, traj_len=traj_len)
-    dp.create_trajectories(count, traj_len=traj_len)
-    co.create_trajectories(count, traj_len=traj_len)
+    pend.create_trajectories(count, traj_len=traj_len, normalize=False)
+    ho.create_trajectories(count, traj_len=traj_len, normalize=False)
+    kp.create_trajectories(count, traj_len=traj_len, normalize=False)
+    dp.create_trajectories(count, traj_len=traj_len, normalize=False)
+    co.create_trajectories(count, traj_len=traj_len, normalize=False)
