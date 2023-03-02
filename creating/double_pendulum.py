@@ -19,7 +19,7 @@ energy1 = lambda state: energy12(state, 1)
 energy2 = lambda state: energy12(state, -1)
 
 
-def create_trajectories(N_traj=1000, traj_len=500, normalize=True, save=True):
+def create_trajectories(N_traj=1000, traj_len=500, normalize=True, save=True, E_min=-3, E_max=0):
     """
     Creates trajectories of double pendulum with different energies.
     Returns trajectories, energies and energies of two modes
@@ -48,7 +48,7 @@ def create_trajectories(N_traj=1000, traj_len=500, normalize=True, save=True):
         return np.array([theta1dot, theta2dot, ptheta1dot, ptheta2dot])
 
     def state0_generator():
-        total_energy = np.random.uniform(-3, 0)
+        total_energy = np.random.uniform(E_min, E_max)
         kinetic_energy = -1
         while kinetic_energy < 0:
             theta1, theta2 = np.random.uniform(-np.pi / 4, np.pi / 4, size=2)
