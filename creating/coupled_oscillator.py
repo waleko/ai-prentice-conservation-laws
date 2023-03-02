@@ -42,7 +42,7 @@ def single_trajectory(E1, E2, traj_len):
     return traj
 
 
-def create_trajectories(N_traj, traj_len=200, normalize=True, save=True):
+def create_trajectories(N_traj=400, traj_len=500, normalize=True, save=True):
     """
     Creates trajectories of coupled_oscillator with different energies.
     Returns trajectories and energies of two modes

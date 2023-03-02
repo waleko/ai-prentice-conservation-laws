@@ -13,7 +13,7 @@ def energy(state):
     return p ** 2 / 2 + x ** 2 / 2
 
 
-def create_trajectories(N_traj, traj_len=200, normalize=True, save=True):
+def create_trajectories(N_traj=200, traj_len=200, normalize=True, save=True):
     """
     Creates trajectories of harmonic oscillator with different energies. Returns trajectories and energies
     @param N_traj: number of created trajectories

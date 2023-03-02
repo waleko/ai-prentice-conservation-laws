@@ -19,7 +19,7 @@ energy1 = lambda state: energy12(state, 1)
 energy2 = lambda state: energy12(state, -1)
 
 
-def create_trajectories(N_traj, traj_len=500, normalize=True, save=True):
+def create_trajectories(N_traj=1000, traj_len=500, normalize=True, save=True):
     """
     Creates trajectories of double pendulum with different energies.
     Returns trajectories, energies and energies of two modes
