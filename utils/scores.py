@@ -2,7 +2,7 @@ import numpy as np
 from sklearn.manifold import Isomap
 from scipy.spatial import distance_matrix
 
-def щквук_scores(dist_matrix, n_dims_arr=np.arange(1, 5), n_trajectories=20):
+def order_scores(dist_matrix, n_dims_arr=np.arange(1, 5), n_trajectories=20):
     random_trajectories = np.random.choice(np.arange(dist_matrix.shape[0]), replace=False, size=n_trajectories)
     initial_orders = np.argsort(np.argsort(dist_matrix[random_trajectories]))
     scores_lst = []
