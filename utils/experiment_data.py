@@ -1,12 +1,15 @@
 import logging
-from typing import Optional, List, Tuple
+from typing import Optional
+from PIL import Image
+from ipywidgets import widgets
 
 from .data_loader import *
 
 
 class PhysExperiment:
     def __init__(self, experiment_name: str, n_conservation_laws: int, data: np.ndarray,
-                 column_names: Union[List[str], None] = None, plot_config: Optional[List[Tuple[int, int]]] = None):
+                 column_names: Union[List[str], None] = None, plot_config: Optional[List[Tuple[int, int]]] = None,
+                 trajectory_animator: Optional[Callable] = None):
         self.experiment_name = experiment_name
         self.n_conservation_laws = n_conservation_laws
         self.data = data
@@ -14,6 +17,7 @@ class PhysExperiment:
         self.traj_cnt = data.shape[0]
         self.traj_len = data.shape[1]
         self.pt_dim = data.shape[2]
+        self.trajectory_animator = trajectory_animator
 
         if column_names is None:
             self.column_names = [f'Component #{x}' for x in range(self.pt_dim)]
@@ -50,10 +54,30 @@ class PhysExperiment:
     def n_eff(self):
         return self.pt_dim - self.n_conservation_laws
 
+    def animate_trajectories(self, count: int = 1):
+        if self.trajectory_animator is None:
+            print(f"No animator for {self.experiment_name}. Skipping...")
+            return []
+        trajs = self.data[np.random.randint(self.traj_cnt, size=count), :]
+        res = []
+        for traj in trajs:
+            res.append(self.trajectory_animator(traj))
+        return res
+
 
 class CsvPhysExperiment(PhysExperiment):
     def __init__(self, experiment_name: str, n_conservation_laws: int, traj_cnt: int = 200,
                  traj_len: int = 1000, column_names: Union[List[str], None] = None,
-                 plot_config: Optional[List[Tuple[int, int]]] = None, start_index: int = 0):
+                 plot_config: Optional[List[Tuple[int, int]]] = None, start_index: int = 0,
+                 trajectory_animator: Optional[Callable] = None):
         data = get_data(experiment_name, traj_cnt, traj_len, start_index=start_index)
-        super().__init__(experiment_name, n_conservation_laws, data, column_names, plot_config)
+        super().__init__(experiment_name, n_conservation_laws, data, column_names, plot_config, trajectory_animator)
+
+
+def ipython_show_gif(filename: str):
+    file = open(filename, "rb")
+    image = file.read()
+    return widgets.Image(
+        value=image,
+        format='gif'
+    )
