@@ -1,4 +1,5 @@
 import numpy as np
+from sklearn.preprocessing import MaxAbsScaler
 
 from typing import List
 
@@ -17,6 +18,42 @@ def rel_deviation(traj_dp):
     energies1_all = np.array([dp.energy1(x) for x in traj_dp])
     rel_std = np.std(energies1_all) / np.mean(energies1_all)
     return rel_std
+
+
+def preprocess(data, scaler):
+    data = data.reshape(*data.shape[:-1], 2, data.shape[-1] // 2).swapaxes(-2, -1).reshape(data.shape)
+    scaled_data = scaler().fit_transform(data.reshape(-1, 2)).reshape(data.shape)
+    return scaled_data, data
+
+def get_kdv_data():
+    def preprocess(data, scaler):
+        data = np.stack((data, np.roll(data, -1, axis=2) - data), axis=3)
+        scaled_data = scaler().fit_transform(data.reshape(-1, 2)).reshape(data.shape)
+        return scaled_data, data
+
+    file_name = "kdv_400_200_200_ver2"
+    out_name = file_name
+    raw_data = np.load("trajectories/" + file_name + ".npz")
+    raw_data, params = raw_data["data"], raw_data["params"]
+    c1, c2, c3 = params.T
+    data, raw_data = preprocess(raw_data, MaxAbsScaler)
+    flatten_data = data.reshape(data.shape[0], data.shape[1], -1)
+    return flatten_data
+
+
+def get_turing_data():
+    def preprocess(data, scaler):
+        data = data.reshape(*data.shape[:-1], 2, data.shape[-1] // 2).swapaxes(-2, -1).reshape(data.shape)
+        scaled_data = scaler().fit_transform(data.reshape(-1, 2)).reshape(data.shape)
+        return scaled_data, data
+
+    file_name = "turing_400_200_50_l8.0"
+    raw_data = np.load("trajectories/" + file_name + ".npz")
+    raw_data, params = raw_data["data"], raw_data["params"]
+
+    eta = params[:,0]
+    data, raw_data = preprocess(raw_data, MaxAbsScaler)
+    return data
 
 
 # Common experiments
@@ -40,8 +77,10 @@ KeplerProblem = CsvPhysExperiment("kepler_problem", 3, plot_config=[(0, 1), (2, 
 # Utility experiments
 Sphere5 = PhysExperiment("sphere5", 1, np.array(
     [np.array([rand_point(dim=5) for _ in range(1000)]) * np.random.randint(1, 100) for _ in range(200)]))
+
 # Advanced
-# Kdv = PhysExperiment("KdV (infinitely many conserved quantities)", 3, np.load("trajectories/kdv_400_200_200_ver2.npz"), column_names=[])
+Turing = PhysExperiment("turing", 1, get_turing_data())
+KdV = PhysExperiment("kdv", 3, get_kdv_data())
 
 common_experiments: List[PhysExperiment] = [
     Pendulum,
