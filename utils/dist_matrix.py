@@ -7,7 +7,7 @@ from tqdm import tqdm
 # def sinkhorn_dist_matrix(data: np.ndarray) -> np.ndarray:
 # return sinkhorn_divergence(pointcloud.PointCloud, x=data[i], y=data[j]).divergence # TODO: debias
 
-def gen_dist_matrix(X: np.ndarray, use_sinkhorn=False) -> np.ndarray:
+def gen_dist_matrix(X: np.ndarray, use_sinkhorn=False, beta=2, name=None) -> np.ndarray:
     """
     Generates distance matrix by calculating Wasserstein distance
     @param X: Trajectories data
@@ -15,9 +15,13 @@ def gen_dist_matrix(X: np.ndarray, use_sinkhorn=False) -> np.ndarray:
     @return: Distance matrix
     """
     weighted_data = np.array([np.array([np.array([1] + list(b)) for b in a]) for a in X])
-    pw_emd = ws.PairwiseEMD(beta=2)
+    pw_emd = ws.PairwiseEMD(beta=beta)
     pw_emd(weighted_data)
-    return np.sqrt(pw_emd.emds())
+    dist_matrix = pw_emd.emds()
+    dist_matrix[dist_matrix < 0] = 0
+    if not (name is None):
+        np.savez("dist_matrix_" + name + ".npz", dist_matrix)
+    return dist_matrix ** (1 / beta)
 
 
 def uniform_on_interval(a: np.ndarray, b: np.ndarray, N_points: int) -> list:
