@@ -24,7 +24,7 @@ def order_scores(dist_matrix, UMAP_kwargs={"n_epochs": 2000, "n_neighbors": 80},
     Score = OrderScore(dist_matrix, n_reference, k_nearest)
     scores_arr = []
     if check_periodic_1d:
-        embed = UMAP(metric="precomputed", n_components=n_dims, output_metric=circle_metric, **UMAP_kwargs).fit_transform(dist_matrix)
+        embed = UMAP(metric="precomputed", n_components=1, output_metric=circle_metric, **UMAP_kwargs).fit_transform(dist_matrix)
         scores_arr.append(Score.order_score(embed, output_metric=circle_metric_without_grad))
     for n_dims in tqdm(n_dims_arr):
         embed = UMAP(metric="precomputed", n_components=n_dims, **UMAP_kwargs).fit_transform(dist_matrix)
