@@ -8,7 +8,7 @@ import creating.coupled_oscillator as co
 
 
 def angle_norm(alpha):
-    return (alpha % (2 * np.pi)) - np.pi
+    return ((alpha + np.pi) % (2 * np.pi)) - np.pi
 
 
 def my_save(data, experiment_name: str):
