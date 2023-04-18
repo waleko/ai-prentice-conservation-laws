@@ -14,6 +14,12 @@ def rand_point(dim=5):
     return x / np.linalg.norm(x)
 
 
+def rand_cylinder_point():
+    angle = np.random.rand() * np.pi
+    z = np.random.rand()
+    return np.array([np.cos(angle), np.sin(angle), z])
+
+
 def rel_deviation(traj_dp):
     energies1_all = np.array([dp.energy1(x) for x in traj_dp])
     rel_std = np.std(energies1_all) / np.mean(energies1_all)
@@ -77,6 +83,8 @@ KeplerProblem = CsvPhysExperiment("kepler_problem", 3, plot_config=[(0, 1), (2, 
 # Utility experiments
 Sphere5 = PhysExperiment("sphere5", 1, np.array(
     [np.array([rand_point(dim=5) for _ in range(1000)]) * np.random.randint(1, 100) for _ in range(200)]))
+Cylinder = PhysExperiment("cylinder", 1, np.array(
+    [np.array([rand_cylinder_point() for _ in range(1000)]) * np.random.randint(1, 100) for _ in range(200)]))
 
 # Advanced
 Turing = PhysExperiment("turing", 1, get_turing_data())
