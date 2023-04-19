@@ -81,6 +81,8 @@ CoupledOscillator = CsvPhysExperiment("coupled_oscillator", 2, plot_config=[(0, 
 KeplerProblem = CsvPhysExperiment("kepler_problem", 3, plot_config=[(0, 1), (2, 3)],
                                   column_names=["x", "y", "px", "py"], trajectory_animator=kepler_problem_animator)
 # Utility experiments
+Sphere3 = PhysExperiment("sphere3", 1, np.array(
+    [np.array([rand_point(dim=3) for _ in range(1000)]) * np.random.randint(1, 100) for _ in range(200)]))
 Sphere5 = PhysExperiment("sphere5", 1, np.array(
     [np.array([rand_point(dim=5) for _ in range(1000)]) * np.random.randint(1, 100) for _ in range(200)]))
 Cylinder = PhysExperiment("cylinder", 1, np.array(
@@ -97,6 +99,5 @@ common_experiments: List[PhysExperiment] = [
     DoublePendulumLowEnergy,
     DoublePendulumHighEnergy,
     CoupledOscillator,
-    KeplerProblem,
-    Sphere5
+    KeplerProblem
 ]

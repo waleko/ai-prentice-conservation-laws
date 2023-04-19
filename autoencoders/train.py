@@ -1,4 +1,4 @@
-from typing import Optional, Tuple, List, Iterable
+from typing import Optional, Tuple, List, Iterable, Callable
 
 import numpy as np
 import torch
@@ -11,26 +11,45 @@ from torch.utils.data import DataLoader
 from torch.utils.data import random_split
 from tqdm.autonotebook import tqdm
 
-from autoencoders.GAELoss import l1_loss
 from autoencoders.autoencoder import AE
 from autoencoders.external_metrics import mse_neighborhood_metric, ranks_metric
 from utils import PhysExperiment
 
 
 class TrajectoryAutoencoderSuite:
+    """
+    Autoencoder tool for training an autoencoder for trajectory embedding
+    """
+
     def __init__(self,
                  experiment: PhysExperiment,
                  epochs: int = 5000,
                  criterion: nn.Module = nn.MSELoss(),
-                 l1_lambda: float = 0,
+                 additional_loss: Optional[Callable[[torch.Tensor, torch.Tensor, nn.Module], torch.Tensor]] = None,
                  ae_class=AE,
                  ae_args=None,
                  device: Optional[str] = None,
-                 batch_size: int = 32,
+                 batch_size: int = 50,
                  log_prefix: Optional[str] = None,
                  apply_scaling: bool = True,
                  train_val_test_split: List[int] = None
                  ):
+        """
+        @param experiment: experiment with trajectory data and ground truth information
+        @param epochs: number of epochs for training
+        @param criterion: loss for training
+        @param additional_loss: additional loss (like l1, sparse, e.g.) that is added to the [criterion].
+        Inner model properties can be used.
+        @param ae_class: Autoencoder class (see [AE])
+        @param ae_args: Additional arguments to pass to the ae_class
+        @param device: device to run the model on (default: auto)
+        @param batch_size: batch size for learning
+        @note batch_size should be a multiple of training size for GAE to work properly
+        @param log_prefix: prefix for the suite that will appear in all wandb logs (default: none)
+        @param apply_scaling: whether to apply min/max abs scaling to the trajectories (default: true)
+        @param train_val_test_split: train, validation, test split proportions for the trajectories
+        (default: [0.8, 0.1, 0.1]
+        """
         if ae_args is None:
             ae_args = {}
         if log_prefix is None:
@@ -50,11 +69,16 @@ class TrajectoryAutoencoderSuite:
 
         self.criterion = criterion.to(device)
         self.mse_criterion = nn.MSELoss().to(device)
-        self.l1_lambda = l1_lambda
+
+        if additional_loss is None:
+            # constant zero
+            additional_loss = lambda _, __, ___: torch.tensor([0.0]).to(self.device)
+        self.additional_loss = additional_loss
+
         self.batch_size = batch_size
 
         if train_val_test_split is None:
-            train_val_test_split = [0.8, 0.2, 0.2]
+            train_val_test_split = [0.8, 0.1, 0.1]
         self.train_val_test_split = train_val_test_split
         self.apply_scaling = apply_scaling
 
@@ -68,15 +92,24 @@ class TrajectoryAutoencoderSuite:
                         traj: np.ndarray,
                         bottleneck_dim_range: Optional[Iterable[int]] = None
                         ) -> Tuple[List[nn.Module], List[float]]:
+        """
+        Train models for the given trajectory
+        @param bottleneck_dim_range: bottleneck layer sizes for models
+        """
+        # scale
         if self.apply_scaling:
             traj = MaxAbsScaler().fit_transform(traj)
+        # default range
         if bottleneck_dim_range is None:
             bottleneck_dim_range = range(1, self.experiment.n_eff + 3)
 
+        # split the trajectory
         a, b, c = self.train_val_test_split
+        assert a + b + c == 1.0
         a = int(a * traj.shape[0])
         b = int(b * traj.shape[0])
         c = traj.shape[0] - a - b
+        assert a > 0 and b > 0 and c > 0
         traj_train, traj_val, traj_test = random_split(traj, [a, b, c])
 
         train_dataloader = DataLoader(traj_train, batch_size=self.batch_size, shuffle=True)
@@ -86,6 +119,7 @@ class TrajectoryAutoencoderSuite:
         model_losses = []
 
         for bottleneck_dim in tqdm(bottleneck_dim_range):
+            # train
             model = self.__train_single(train_dataloader, valid_dataloader, bottleneck_dim)
             models.append(model)
 
@@ -96,8 +130,11 @@ class TrajectoryAutoencoderSuite:
         return models, model_losses
 
     def __train_single(self, train_dataloader, valid_dataloader, bottleneck_dim: int):
+        # get model
         model = self.ae_class(self.experiment.pt_dim, bottleneck_dim, **self.ae_args).to(self.device)
         optimizer = torch.optim.Adam(model.parameters())
+        # scheduler for lr change
+        # todo: make configurable
         scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=self.epochs // 10, gamma=0.5)
 
         counter = 0
@@ -112,9 +149,9 @@ class TrajectoryAutoencoderSuite:
             for batch_pts in train_dataloader:
                 inp = batch_pts.float().to(self.device)
                 output = model(inp)
-                loss = self.criterion(output, inp) + l1_loss(model.parameters(), self.l1_lambda)
+                loss = self.criterion(inp, output) + self.additional_loss(inp, output, model)
                 train_losses.append(loss.item())
-                train_mse_losses.append(self.mse_criterion(output, inp).item())
+                train_mse_losses.append(self.mse_criterion(inp, output).item())
 
                 loss.backward()
                 optimizer.step()
@@ -124,9 +161,9 @@ class TrajectoryAutoencoderSuite:
             for batch_pts in valid_dataloader:
                 inp = batch_pts.float().to(self.device)
                 output = model(inp)
-                loss = self.criterion(output, inp) + l1_loss(model.parameters(), self.l1_lambda)
+                loss = self.criterion(inp, output) + self.additional_loss(inp, output, model)
                 valid_losses.append(loss.item())
-                valid_mse_losses.append(self.mse_criterion(output, inp).item())
+                valid_mse_losses.append(self.mse_criterion(inp, output).item())
 
             train_loss = np.average(train_losses)
             valid_loss = np.average(valid_losses)
@@ -141,9 +178,10 @@ class TrajectoryAutoencoderSuite:
             scheduler.step()
         return model
 
-    def test(self, model, traj_test: torch.Tensor, bottleneck_dim: int) -> Tuple[float, float]:
+    def test(self, model, traj_test, bottleneck_dim: int) -> Tuple[float, float]:
         model.eval()
         traj_test_np = np.array(traj_test)
+        traj_test = torch.tensor(traj_test_np).to(self.device).float()
         output = model(traj_test)
         output_np = output.detach().cpu().numpy()
 
@@ -157,13 +195,18 @@ class TrajectoryAutoencoderSuite:
         wandb.log({f"{self.full_exp_name}_{bottleneck_dim}_test_mse": test_mse})
         wandb.log({f"{self.full_exp_name}_all_test_mse": test_mse})
         wandb.log({f"{self.full_exp_name}_{bottleneck_dim}_test_metric_rank": test_metric_rank})
-        wandb.log({f"{self.full_exp_name}_all_{bottleneck_dim}_test_metric_rank": test_metric_rank})
+        wandb.log({f"{self.full_exp_name}_all_test_metric_rank": test_metric_rank})
         wandb.log({f"{self.full_exp_name}_{bottleneck_dim}_test_metric_mse_neighborhood": test_metric_mse_neighborhood})
         wandb.log({f"{self.full_exp_name}_all_test_metric_mse_neighborhood": test_metric_mse_neighborhood})
 
         return test_loss, test_mse
 
     def analyze_n_eff(self, random_seed: Optional[int] = 42):
+        """
+        Trains the model with bottleneck layer size equal to n_eff.
+
+        Logs additional information to wandb, like embeddings and before/after data.
+        """
         traj = self.experiment.single_trajectory(random_seed)
         n_eff = self.experiment.n_eff
 

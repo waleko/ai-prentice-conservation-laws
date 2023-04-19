@@ -1,4 +1,5 @@
+from .GAELoss import *
 from .autoencoder import *
 from .external_metrics import *
-from .GAELoss import *
+from .sparse import *
 from .train import *
