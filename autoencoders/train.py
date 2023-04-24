@@ -84,13 +84,15 @@ class TrajectoryAutoencoderSuite:
 
     def train_traj_num(self,
                        random_seed: Optional[int] = 42,
-                       bottleneck_dim_range: Optional[Iterable[int]] = None):
+                       bottleneck_dim_range: Optional[Iterable[int]] = None,
+                       analyze_n_eff: bool = True):
         traj = self.experiment.single_trajectory(random_seed)
-        return self.train_traj_data(traj, bottleneck_dim_range)
+        return self.train_traj_data(traj, bottleneck_dim_range, analyze_n_eff)
 
     def train_traj_data(self,
                         traj: np.ndarray,
-                        bottleneck_dim_range: Optional[Iterable[int]] = None
+                        bottleneck_dim_range: Optional[Iterable[int]] = None,
+                        analyze_n_eff: bool = True
                         ) -> Tuple[List[nn.Module], List[float]]:
         """
         Train models for the given trajectory
@@ -126,6 +128,10 @@ class TrajectoryAutoencoderSuite:
             # test
             loss_val, mse = self.test(model, traj_test, bottleneck_dim)
             model_losses.append(loss_val)
+
+            # analyze n_eff model if requested
+            if bottleneck_dim == self.experiment.n_eff and analyze_n_eff:
+                self.analyze_model(model, traj)
 
         return models, model_losses
 
@@ -210,9 +216,11 @@ class TrajectoryAutoencoderSuite:
         traj = self.experiment.single_trajectory(random_seed)
         n_eff = self.experiment.n_eff
 
-        res = self.train_traj_data(traj, [n_eff])
-        model, test_loss = res[0][0], res[1][0]
+        self.train_traj_data(traj, [n_eff], analyze_n_eff=True)
 
+    def analyze_model(self, model: nn.Module, traj: np.ndarray, bottleneck_dim: Optional[int] = None):
+        if bottleneck_dim is None:
+            bottleneck_dim = self.experiment.n_eff
         model.eval()
         full_traj = torch.Tensor(traj).to(self.device)
         with torch.no_grad():
@@ -224,20 +232,20 @@ class TrajectoryAutoencoderSuite:
             exported = np.append(all_trajs, color, axis=1)
             table = wandb.Table(columns=self.experiment.column_names + ["transformed"], data=exported)
             wandb.log({f"{self.experiment.experiment_name} before/after": table})
-        if n_eff == 1:
+        if bottleneck_dim == 1:
             # coloring
             traj_with_color = np.append(traj, embedding, axis=1)
             wandb.log({f"{self.full_exp_name} coloring for n_eff=1 embedding": wandb.Table(
                 self.experiment.column_names + ["color"], data=traj_with_color)})
-        elif n_eff == 2:
+        elif bottleneck_dim == 2:
             # 2d embedding
             wandb.log(
                 {f"{self.full_exp_name} 2d n_eff embedding": wandb.Table(["projection1", "projection2"], embedding)})
-        elif n_eff == 3:
+        elif bottleneck_dim == 3:
             # 3d embedding
             wandb.log({f"{self.full_exp_name} 3d n_eff embedding": wandb.Object3D(embedding)})
         else:
-            wandb.alert(f"no visual representation for n_eff={n_eff} with experiment {self.full_exp_name}")
+            wandb.alert(f"no visual representation for dim={bottleneck_dim} with experiment {self.full_exp_name}")
 
     def plot_errorbars(self,
                        model_losses: np.ndarray,
