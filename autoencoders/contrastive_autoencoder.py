@@ -3,37 +3,41 @@ import torch
 
 
 class ContrastiveWrapper(nn.Module):
-    def __init__(self, model: nn.Module, n_eff: int):
+    def __init__(self, model: nn.Module, n_eff: int, device):
         super(ContrastiveWrapper, self).__init__()
-        self.__contrastive_loss = torch.tensor([0])
         self.model = model
         self.n_eff = n_eff
+        self.device = device
+        self.m = 0.01
 
     def forward(self, x):
+        return self.calc(x, skip_loss=False)
+
+    def calc(self, x, skip_loss: bool = False):
         labels = x[:, 0]
         data = x[:, 1:]
 
         embedding = self.model.encoder(data)
+        decoded = self.model.decoder(embedding)
 
-        conserved = embedding[:, self.n_eff:]
-        n_conserved = conserved.size(1)
+        if not skip_loss:
+            conserved = embedding[:, self.n_eff:]
+            n_conserved = conserved.size(1)
 
-        # contrastive loss calculation
-        labels = labels.view(-1, 1).expand(-1, n_conserved).long()
-        unique_labels, labels_count = labels.unique(dim=0, return_counts=True)
-        n_labels = unique_labels.size(0)
-        labels_dims = labels.repeat(1, n_conserved)
+            # contrastive loss calculation
+            labels = labels.view(-1, 1).expand(-1, n_conserved).long()
+            _, labels_inverse = labels.unique(dim=0, return_inverse=True)
 
-        N = labels_count.view(-1, 1)
+            lbl = labels_inverse.view(-1, 1)
+            Y = (lbl != lbl.T)
+            D2 = (conserved[:, None] - conserved[None, :]) ** 2
+            D_mean = D2.mean(dim=-1)
 
-        S = torch.zeros((n_labels, n_conserved), dtype=conserved.dtype).scatter_add_(0, labels_dims, conserved)
-        S2 = torch.zeros((n_labels, n_conserved), dtype=conserved.dtype).scatter_add_(0, labels_dims, conserved ** 2)
-        M = S / N
-        MSE = (S2 - 2 * M * S) / N + (M ** 2)
-        res = MSE.mean()
-        self.__contrastive_loss = res
+            self.C_sim = torch.sum(Y * D_mean) / (Y.sum() + 1)
+            self.C_diff = torch.sum((~Y) * torch.max(torch.zeros_like(D_mean, device=self.device), self.m - D_mean))\
+                          / ((~Y).sum() + 1)
 
-        return self.model.decoder(embedding)
+        return decoded
 
-    def contrastive_loss(self):
-        return self.__contrastive_loss
+    def contrastive_loss(self, sim_lambda: float = 1, diff_lambda: float = 1):
+        return sim_lambda * self.C_sim + diff_lambda * self.C_diff

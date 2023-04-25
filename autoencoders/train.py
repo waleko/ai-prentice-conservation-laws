@@ -146,6 +146,7 @@ class TrajectoryAutoencoderSuite:
             models.append(model)
 
             # test
+            # if not self.is_contrastive:
             loss_val, mse = self.test(model, traj_test, bottleneck_dim)
             model_losses.append(loss_val)
 
@@ -159,7 +160,7 @@ class TrajectoryAutoencoderSuite:
         # get model
         model = self.ae_class(self.experiment.pt_dim, bottleneck_dim, **self.ae_args).to(self.device)
         if self.is_contrastive:
-            model = ContrastiveWrapper(model, self.experiment.n_eff)
+            model = ContrastiveWrapper(model, self.experiment.n_eff, self.device)
         optimizer = torch.optim.Adam(model.parameters(), lr=self.init_lr)
         # scheduler for lr change
         # todo: make configurable
@@ -226,13 +227,17 @@ class TrajectoryAutoencoderSuite:
     def test(self, model, traj_test, bottleneck_dim: int) -> Tuple[float, float]:
         model.eval()
         traj_test = torch.tensor(np.array(traj_test)).to(self.device).float()
-        output = model(traj_test)
-        test_inp = traj_test if not self.is_contrastive else traj_test[:, 1:]
+        if self.is_contrastive:
+            output = model.calc(traj_test, skip_loss=True)
+            test_inp = traj_test[:, 1:]
+        else:
+            output = model(traj_test)
+            test_inp = traj_test
         traj_test_np = test_inp.detach().cpu().numpy()
         output_np = output.detach().cpu().numpy()
 
         test_mse = mean_squared_error(traj_test_np, output_np)
-        test_loss = (self.criterion(test_inp, output) + self.additional_loss(test_inp, output, model)).item()
+        test_loss = (self.criterion(test_inp, output)).item()  # + self.additional_loss(test_inp, output, model)
         test_metric_mse_neighborhood = mse_neighborhood_metric(traj_test_np, output_np)
 
         test_metric_rank = ranks_metric(traj_test_np, output_np)
@@ -299,8 +304,8 @@ class TrajectoryAutoencoderSuite:
         wandb.log({title: wandb.Image(f"plot_{self.full_exp_name}.png")})
         plt.close()
 
-    def contrastive_learning(self) -> nn.Module:
+    def contrastive_learning(self, max_size: Optional[int] = None) -> nn.Module:
         assert self.is_contrastive, "Contrastive mode must be enabled"
-        traj_with_indices = self.experiment.contrastive_data()
+        traj_with_indices = self.experiment.contrastive_data(max_size)
         models, _ = self.train_traj_data(traj_with_indices, [self.experiment.pt_dim], analyze_n_eff=False)
         return models[0]
