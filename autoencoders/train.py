@@ -37,7 +37,8 @@ class TrajectoryAutoencoderSuite:
                  train_val_test_split: List[int] = None,
                  do_animate: bool = False,
                  early_stopping_threshold: Optional[float] = 1e-5,
-                 init_lr: float = 0.01
+                 init_lr: float = 0.01,
+                 is_contrastive: bool = False
                  ):
         """
         @param experiment: experiment with trajectory data and ground truth information
@@ -87,7 +88,7 @@ class TrajectoryAutoencoderSuite:
         self.train_val_test_split = train_val_test_split
         self.apply_scaling = apply_scaling
 
-        self.__is_contrastive = False
+        self.is_contrastive = is_contrastive
         self.animator = Animator(self.experiment, self.full_exp_name)
         self.do_animate = do_animate
 
@@ -157,7 +158,7 @@ class TrajectoryAutoencoderSuite:
     def __train_single(self, train_dataloader, valid_dataloader, bottleneck_dim: int):
         # get model
         model = self.ae_class(self.experiment.pt_dim, bottleneck_dim, **self.ae_args).to(self.device)
-        if self.__is_contrastive:
+        if self.is_contrastive:
             model = ContrastiveWrapper(model, self.experiment.n_eff)
         optimizer = torch.optim.Adam(model.parameters(), lr=self.init_lr)
         # scheduler for lr change
@@ -176,7 +177,7 @@ class TrajectoryAutoencoderSuite:
             for batch_pts in train_dataloader:
                 inp = batch_pts.float().to(self.device)
                 output = model(inp)
-                test_inp = inp if not self.__is_contrastive else inp[:, 1:]
+                test_inp = inp if not self.is_contrastive else inp[:, 1:]
                 loss = self.criterion(test_inp, output) + self.additional_loss(test_inp, output, model)
                 train_losses.append(loss.item())
                 train_mse_losses.append(self.mse_criterion(test_inp, output).item())
@@ -189,7 +190,7 @@ class TrajectoryAutoencoderSuite:
             for batch_pts in valid_dataloader:
                 inp = batch_pts.float().to(self.device)
                 output = model(inp)
-                test_inp = inp if not self.__is_contrastive else inp[:, 1:]
+                test_inp = inp if not self.is_contrastive else inp[:, 1:]
                 loss = self.criterion(test_inp, output) + self.additional_loss(test_inp, output, model)
                 valid_losses.append(loss.item())
                 valid_mse_losses.append(self.mse_criterion(test_inp, output).item())
@@ -226,7 +227,7 @@ class TrajectoryAutoencoderSuite:
         model.eval()
         traj_test = torch.tensor(np.array(traj_test)).to(self.device).float()
         output = model(traj_test)
-        test_inp = traj_test if not self.__is_contrastive else traj_test[:, 1:]
+        test_inp = traj_test if not self.is_contrastive else traj_test[:, 1:]
         traj_test_np = test_inp.detach().cpu().numpy()
         output_np = output.detach().cpu().numpy()
 
@@ -299,8 +300,7 @@ class TrajectoryAutoencoderSuite:
         plt.close()
 
     def contrastive_learning(self) -> nn.Module:
+        assert self.is_contrastive, "Contrastive mode must be enabled"
         traj_with_indices = self.experiment.contrastive_data()
-        self.__is_contrastive = True
         models, _ = self.train_traj_data(traj_with_indices, [self.experiment.pt_dim], analyze_n_eff=False)
-        self.__is_contrastive = False
         return models[0]
