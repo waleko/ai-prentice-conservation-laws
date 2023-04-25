@@ -12,7 +12,9 @@ from torch.utils.data import random_split
 from tqdm.autonotebook import tqdm
 
 from autoencoders.autoencoder import AE
+from autoencoders.contrastive_autoencoder import ContrastiveWrapper
 from autoencoders.external_metrics import mse_neighborhood_metric, ranks_metric
+from experiments.animator import Animator
 from utils import PhysExperiment
 
 
@@ -32,7 +34,10 @@ class TrajectoryAutoencoderSuite:
                  batch_size: int = 50,
                  log_prefix: Optional[str] = None,
                  apply_scaling: bool = True,
-                 train_val_test_split: List[int] = None
+                 train_val_test_split: List[int] = None,
+                 do_animate: bool = False,
+                 early_stopping_threshold: Optional[float] = 1e-5,
+                 init_lr: float = 0.01
                  ):
         """
         @param experiment: experiment with trajectory data and ground truth information
@@ -82,6 +87,13 @@ class TrajectoryAutoencoderSuite:
         self.train_val_test_split = train_val_test_split
         self.apply_scaling = apply_scaling
 
+        self.__is_contrastive = False
+        self.animator = Animator(self.experiment, self.full_exp_name)
+        self.do_animate = do_animate
+
+        self.early_stopping_threshold = early_stopping_threshold
+        self.init_lr = init_lr
+
     def train_traj_num(self,
                        random_seed: Optional[int] = 42,
                        bottleneck_dim_range: Optional[Iterable[int]] = None,
@@ -121,8 +133,15 @@ class TrajectoryAutoencoderSuite:
         model_losses = []
 
         for bottleneck_dim in tqdm(bottleneck_dim_range):
+            if self.do_animate:
+                self.animator.start(torch.tensor(traj).to(self.device).float(), f"b{bottleneck_dim}")
+
             # train
             model = self.__train_single(train_dataloader, valid_dataloader, bottleneck_dim)
+
+            if self.do_animate:
+                fname = self.animator.save()
+                wandb.log({f"{self.full_exp_name}_{bottleneck_dim}_animation": wandb.Video(fname)})
             models.append(model)
 
             # test
@@ -138,7 +157,9 @@ class TrajectoryAutoencoderSuite:
     def __train_single(self, train_dataloader, valid_dataloader, bottleneck_dim: int):
         # get model
         model = self.ae_class(self.experiment.pt_dim, bottleneck_dim, **self.ae_args).to(self.device)
-        optimizer = torch.optim.Adam(model.parameters())
+        if self.__is_contrastive:
+            model = ContrastiveWrapper(model, self.experiment.n_eff)
+        optimizer = torch.optim.Adam(model.parameters(), lr=self.init_lr)
         # scheduler for lr change
         # todo: make configurable
         scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=self.epochs // 10, gamma=0.5)
@@ -155,9 +176,10 @@ class TrajectoryAutoencoderSuite:
             for batch_pts in train_dataloader:
                 inp = batch_pts.float().to(self.device)
                 output = model(inp)
-                loss = self.criterion(inp, output) + self.additional_loss(inp, output, model)
+                test_inp = inp if not self.__is_contrastive else inp[:, 1:]
+                loss = self.criterion(test_inp, output) + self.additional_loss(test_inp, output, model)
                 train_losses.append(loss.item())
-                train_mse_losses.append(self.mse_criterion(inp, output).item())
+                train_mse_losses.append(self.mse_criterion(test_inp, output).item())
 
                 loss.backward()
                 optimizer.step()
@@ -167,9 +189,10 @@ class TrajectoryAutoencoderSuite:
             for batch_pts in valid_dataloader:
                 inp = batch_pts.float().to(self.device)
                 output = model(inp)
-                loss = self.criterion(inp, output) + self.additional_loss(inp, output, model)
+                test_inp = inp if not self.__is_contrastive else inp[:, 1:]
+                loss = self.criterion(test_inp, output) + self.additional_loss(test_inp, output, model)
                 valid_losses.append(loss.item())
-                valid_mse_losses.append(self.mse_criterion(inp, output).item())
+                valid_mse_losses.append(self.mse_criterion(test_inp, output).item())
 
             train_loss = np.average(train_losses)
             valid_loss = np.average(valid_losses)
@@ -182,17 +205,33 @@ class TrajectoryAutoencoderSuite:
             wandb.log({f"{self.full_exp_name}_{bottleneck_dim}_val_mse_loss": valid_mse_loss})
             wandb.log({f"{self.full_exp_name}_{bottleneck_dim}_lr": optimizer.param_groups[0]['lr']})
             scheduler.step()
+
+            # animate
+            if self.do_animate:
+                self.animator.forward_and_log(model)
+
+            # early stopping
+            if self.early_stopping_threshold is not None and valid_loss < self.early_stopping_threshold:
+                counter += 1
+            else:
+                counter = 0
+            if counter > 50:
+                wandb.alert(title="Early stopping",
+                            text=f"Early stopping for {self.full_exp_name}_{bottleneck_dim} on epoch #{epoch}/{self.epochs}")
+                print("Early stopping")
+                break
         return model
 
     def test(self, model, traj_test, bottleneck_dim: int) -> Tuple[float, float]:
         model.eval()
-        traj_test_np = np.array(traj_test)
-        traj_test = torch.tensor(traj_test_np).to(self.device).float()
+        traj_test = torch.tensor(np.array(traj_test)).to(self.device).float()
         output = model(traj_test)
+        test_inp = traj_test if not self.__is_contrastive else traj_test[:, 1:]
+        traj_test_np = test_inp.detach().cpu().numpy()
         output_np = output.detach().cpu().numpy()
 
         test_mse = mean_squared_error(traj_test_np, output_np)
-        test_loss = self.criterion(traj_test, output).item()
+        test_loss = (self.criterion(test_inp, output) + self.additional_loss(test_inp, output, model)).item()
         test_metric_mse_neighborhood = mse_neighborhood_metric(traj_test_np, output_np)
 
         test_metric_rank = ranks_metric(traj_test_np, output_np)
@@ -232,20 +271,11 @@ class TrajectoryAutoencoderSuite:
             exported = np.append(all_trajs, color, axis=1)
             table = wandb.Table(columns=self.experiment.column_names + ["transformed"], data=exported)
             wandb.log({f"{self.experiment.experiment_name} before/after": table})
-        if bottleneck_dim == 1:
-            # coloring
-            traj_with_color = np.append(traj, embedding, axis=1)
-            wandb.log({f"{self.full_exp_name} coloring for n_eff=1 embedding": wandb.Table(
-                self.experiment.column_names + ["color"], data=traj_with_color)})
-        elif bottleneck_dim == 2:
-            # 2d embedding
-            wandb.log(
-                {f"{self.full_exp_name} 2d n_eff embedding": wandb.Table(["projection1", "projection2"], embedding)})
-        elif bottleneck_dim == 3:
-            # 3d embedding
-            wandb.log({f"{self.full_exp_name} 3d n_eff embedding": wandb.Object3D(embedding)})
-        else:
-            wandb.alert(f"no visual representation for dim={bottleneck_dim} with experiment {self.full_exp_name}")
+        # coloring
+        traj_with_color = np.append(traj, embedding, axis=1)
+        wandb.log({f"{self.full_exp_name} colored by embedding projection": wandb.Table(
+            self.experiment.column_names + [f"projection{idx}" for idx in range(bottleneck_dim)],
+            data=traj_with_color)})
 
     def plot_errorbars(self,
                        model_losses: np.ndarray,
@@ -267,3 +297,10 @@ class TrajectoryAutoencoderSuite:
         plt.savefig(f"plot_{self.full_exp_name}")
         wandb.log({title: wandb.Image(f"plot_{self.full_exp_name}.png")})
         plt.close()
+
+    def contrastive_learning(self) -> nn.Module:
+        traj_with_indices = self.experiment.contrastive_data()
+        self.__is_contrastive = True
+        models, _ = self.train_traj_data(traj_with_indices, [self.experiment.pt_dim], analyze_n_eff=False)
+        self.__is_contrastive = False
+        return models[0]

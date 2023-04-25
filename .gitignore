@@ -134,3 +134,5 @@ wandb
 lightning_logs
 
 .rolos_env.sh
+
+*.mp4

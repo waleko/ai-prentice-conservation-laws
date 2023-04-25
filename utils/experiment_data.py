@@ -1,5 +1,7 @@
 import logging
 from typing import Optional
+
+import numpy as np
 from PIL import Image
 from ipywidgets import widgets
 
@@ -64,6 +66,15 @@ class PhysExperiment:
         for traj in trajs:
             res.append(self.trajectory_animator(traj))
         return res
+
+    def contrastive_data(self) -> np.ndarray:
+        """
+        TODO
+        @return:
+        """
+        points = self.data.reshape(self.traj_cnt * self.traj_len, self.pt_dim)
+        indices = np.tile(np.arange(self.traj_cnt)[:, None], (1, self.traj_len)).reshape(-1, 1)
+        return np.concatenate((indices, points), axis=1)
 
 
 class CsvPhysExperiment(PhysExperiment):

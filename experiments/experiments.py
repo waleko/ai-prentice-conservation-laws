@@ -67,15 +67,13 @@ Pendulum = CsvPhysExperiment("pendulum", 1, plot_config=[(0, 1)], column_names=[
                              trajectory_animator=pendulum_animator)
 HarmonicOscillator = CsvPhysExperiment("harmonic_oscillator", 1, plot_config=[(0, 1)], column_names=["x", "x dot"],
                                        trajectory_animator=harmonic_oscillator_animator)
-# DoublePendulum = CsvPhysExperiment("double_pendulum", 1, plot_config=[(0, 1), (2, 3)],
-#                                    column_names=["theta1", "theta2", "p1", "p2"])
-DoublePendulumLowEnergy = CsvPhysExperiment("double_pendulum_low_energy", 2, plot_config=[(0, 1), (2, 3)],
+DoublePendulumLowEnergy = CsvPhysExperiment("double_pendulum_low_energy", 2, plot_config=[(0, 2), (1, 3)],
                                             column_names=["theta1", "theta2", "p1", "p2"],
                                             trajectory_animator=double_pendulum_animator)
-DoublePendulumHighEnergy = CsvPhysExperiment("double_pendulum_high_energy", 1, plot_config=[(0, 1), (2, 3)],
+DoublePendulumHighEnergy = CsvPhysExperiment("double_pendulum_high_energy", 1, plot_config=[(0, 2), (1, 3)],
                                              column_names=["theta1", "theta2", "p1", "p2"],
                                              trajectory_animator=double_pendulum_animator)
-CoupledOscillator = CsvPhysExperiment("coupled_oscillator", 2, plot_config=[(0, 1), (2, 3)],
+CoupledOscillator = CsvPhysExperiment("coupled_oscillator", 2, plot_config=[(0, 2), (1, 3)],
                                       column_names=["x1", "x2", "x1 dot", "x2 dot"],
                                       trajectory_animator=coupled_oscillator_animator)
 KeplerProblem = CsvPhysExperiment("kepler_problem", 3, plot_config=[(0, 1), (2, 3)],
@@ -95,7 +93,6 @@ KdV = PhysExperiment("kdv", 3, get_kdv_data())
 common_experiments: List[PhysExperiment] = [
     Pendulum,
     HarmonicOscillator,
-    # DoublePendulum,
     DoublePendulumLowEnergy,
     DoublePendulumHighEnergy,
     CoupledOscillator,
