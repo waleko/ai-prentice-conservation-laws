@@ -12,7 +12,6 @@ from torch.utils.data import random_split
 from tqdm.autonotebook import tqdm
 
 from autoencoders.autoencoder import AE
-from autoencoders.contrastive_autoencoder import ContrastiveWrapper
 from autoencoders.external_metrics import mse_neighborhood_metric, ranks_metric
 from experiments.animator import Animator
 from utils import PhysExperiment
@@ -37,8 +36,7 @@ class TrajectoryAutoencoderSuite:
                  train_val_test_split: List[int] = None,
                  do_animate: bool = False,
                  early_stopping_threshold: Optional[float] = 1e-5,
-                 init_lr: float = 0.01,
-                 is_contrastive: bool = False
+                 init_lr: float = 0.01
                  ):
         """
         @param experiment: experiment with trajectory data and ground truth information
@@ -88,7 +86,6 @@ class TrajectoryAutoencoderSuite:
         self.train_val_test_split = train_val_test_split
         self.apply_scaling = apply_scaling
 
-        self.is_contrastive = is_contrastive
         self.animator = Animator(self.experiment, self.full_exp_name)
         self.do_animate = do_animate
 
@@ -146,7 +143,6 @@ class TrajectoryAutoencoderSuite:
             models.append(model)
 
             # test
-            # if not self.is_contrastive:
             loss_val, mse = self.test(model, traj_test, bottleneck_dim)
             model_losses.append(loss_val)
 
@@ -159,8 +155,6 @@ class TrajectoryAutoencoderSuite:
     def __train_single(self, train_dataloader, valid_dataloader, bottleneck_dim: int):
         # get model
         model = self.ae_class(self.experiment.pt_dim, bottleneck_dim, **self.ae_args).to(self.device)
-        if self.is_contrastive:
-            model = ContrastiveWrapper(model, self.experiment.n_eff, self.device)
         optimizer = torch.optim.Adam(model.parameters(), lr=self.init_lr)
         # scheduler for lr change
         # todo: make configurable
@@ -178,10 +172,9 @@ class TrajectoryAutoencoderSuite:
             for batch_pts in train_dataloader:
                 inp = batch_pts.float().to(self.device)
                 output = model(inp)
-                test_inp = inp if not self.is_contrastive else inp[:, 1:]
-                loss = self.criterion(test_inp, output) + self.additional_loss(test_inp, output, model)
+                loss = self.criterion(inp, output) + self.additional_loss(inp, output, model)
                 train_losses.append(loss.item())
-                train_mse_losses.append(self.mse_criterion(test_inp, output).item())
+                train_mse_losses.append(self.mse_criterion(inp, output).item())
 
                 loss.backward()
                 optimizer.step()
@@ -191,10 +184,9 @@ class TrajectoryAutoencoderSuite:
             for batch_pts in valid_dataloader:
                 inp = batch_pts.float().to(self.device)
                 output = model(inp)
-                test_inp = inp if not self.is_contrastive else inp[:, 1:]
-                loss = self.criterion(test_inp, output) + self.additional_loss(test_inp, output, model)
+                loss = self.criterion(inp, output) + self.additional_loss(inp, output, model)
                 valid_losses.append(loss.item())
-                valid_mse_losses.append(self.mse_criterion(test_inp, output).item())
+                valid_mse_losses.append(self.mse_criterion(inp, output).item())
 
             train_loss = np.average(train_losses)
             valid_loss = np.average(valid_losses)
@@ -227,12 +219,8 @@ class TrajectoryAutoencoderSuite:
     def test(self, model, traj_test, bottleneck_dim: int) -> Tuple[float, float]:
         model.eval()
         traj_test = torch.tensor(np.array(traj_test)).to(self.device).float()
-        if self.is_contrastive:
-            output = model.calc(traj_test, skip_loss=True)
-            test_inp = traj_test[:, 1:]
-        else:
-            output = model(traj_test)
-            test_inp = traj_test
+        output = model(traj_test)
+        test_inp = traj_test
         traj_test_np = test_inp.detach().cpu().numpy()
         output_np = output.detach().cpu().numpy()
 
@@ -303,9 +291,3 @@ class TrajectoryAutoencoderSuite:
         plt.savefig(f"plot_{self.full_exp_name}")
         wandb.log({title: wandb.Image(f"plot_{self.full_exp_name}.png")})
         plt.close()
-
-    def contrastive_learning(self, max_size: Optional[int] = None) -> nn.Module:
-        assert self.is_contrastive, "Contrastive mode must be enabled"
-        traj_with_indices = self.experiment.contrastive_data(max_size)
-        models, _ = self.train_traj_data(traj_with_indices, [self.experiment.pt_dim], analyze_n_eff=False)
-        return models[0]
