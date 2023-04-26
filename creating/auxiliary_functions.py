@@ -45,7 +45,7 @@ def fourth_order_runge_kutta(derivative: Callable[[np.ndarray], np.ndarray], sta
 
         # adjusting time step according to the conservation deviation
         while True:
-            if time() - start_time > 5:
+            if time() - start_time > 50:
                 return None, None
             deviation_ = deviation(conserved_quantity(states[-1]), conserved_quantity(next_state(states[-1], dt)), deviation_type)
 
@@ -66,7 +66,7 @@ def fourth_order_runge_kutta(derivative: Callable[[np.ndarray], np.ndarray], sta
 
 def generate_traj(derivative: Callable[[np.ndarray], np.ndarray], state0_generator: np.ndarray,
                   conserved_quantity: Callable[[np.ndarray], float], deviation_type: Literal["absolute", "relative"], dt_max: float, T: float,
-                  traj_len: int=200, max_deviation_threshold: float=0.01, min_deviation_threshold: float=0.0001):
+                  traj_len: int=200, max_deviation_threshold: float=1e-02, min_deviation_threshold: float=1e-04):
     """
     Generates uniformli distributed (with respect to the time) points on the trajectory
     @param derivative: derivetive of the state with respect to time as a function of the state
