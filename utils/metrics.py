@@ -9,7 +9,7 @@ def my_abs(x):
         return x 
 
 @numba.njit()
-def normalize(x, dim=2 * np.pi):
+def normalize_angle(x, dim=2 * np.pi):
     while x > dim / 2:
         x -= dim
     while x < -dim / 2:
@@ -25,13 +25,13 @@ def sign(x):
     
 @numba.njit(fastmath=True)
 def circle_metric(x, y):
-    d = normalize(x[0] - y[0])
+    d = normalize_angle(x[0] - y[0])
     g = sign(d)
     return my_abs(d), np.array([g])
 
 @numba.njit(fastmath=True)
 def circle_metric_without_grad(x, y):
-    return my_abs(normalize(x[0] - y[0]))
+    return my_abs(normalize_angle(x[0] - y[0]))
 
 @numba.njit(fastmath=True)
 def circle_in_2d_metric(x, y):
@@ -48,7 +48,7 @@ def circles_and_lines_metric(circles_dims):
         dist_sqr = 0.0
         grad = np.zeros(x.shape[0])
         for i in range(n):
-            d = normalize(x[i] - y[i], circles_dims[i])
+            d = normalize_angle(x[i] - y[i], circles_dims[i])
             grad[i] = d
             dist_sqr += d ** 2
         for i in range(n, x.shape[0]):
