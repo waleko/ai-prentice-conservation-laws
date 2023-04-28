@@ -32,7 +32,24 @@ class TrajectoryContrastiveSuite:
                  init_lr: float = 0.01
                  ):
         """
+        A suite for training an autoencoder on a physical experiment with contrastive loss.
+        It contains methods for training, testing and inference.
 
+        @param experiment: Physical experiment (with data and infos)
+        @param epochs: Number of iterations during training
+        @param criterion: Loss between input and output of the autoencoder (default: MSE)
+        @param additional_loss: Additional loss between input and output with the model information (e.g. for L1)
+        @param contrastive_loss: Contrastive loss used. Shall accept embedding and labels from a batch.
+        @param ae_class: Base class for autoencoder model. See `AE`
+        @param ae_args: Additional arguments passed to the ae_class
+        @param device: Device for computations
+        @param batch_size: Batch size for training
+        @param log_prefix: Additional prefix for all wandb logs
+        @param apply_scaling: Whether to apply scaling of training data
+        @param train_val_test_split: Train, validation, test split ration (default: [0.8, 0.1, 0.1])
+        @param do_animate: Whether to animate the training process (currently unsupported)
+        @param early_stopping_threshold: Optional threshold for early stopping
+        @param init_lr: Initial lr for the optimizer
         """
         if ae_args is None:
             ae_args = {}
@@ -77,6 +94,12 @@ class TrajectoryContrastiveSuite:
         self.init_lr = init_lr
 
     def train(self, traj_cnt: Optional[int] = None, traj_len: Optional[int] = None):
+        """
+        Trains the autoencoder with data from the experiment
+        @param traj_cnt: Number of trajectories to use (default: all)
+        @param traj_len: Number of points per trajectory (default: all)
+        @return: Trained autoencoder
+        """
         trajs = self.experiment.contrastive_data(traj_cnt, traj_len)
         return self.train_traj_data(trajs)
 
@@ -85,6 +108,11 @@ class TrajectoryContrastiveSuite:
         return p[:, :1], p[:, 1:]
 
     def train_traj_data(self, trajs: np.ndarray) -> nn.Module:
+        """
+        Trains the autoencoder with given trajectory data
+        @param trajs: Trajectory data
+        @return: Trained autoencoder
+        """
         # scale
         if self.apply_scaling:
             trajs = MaxAbsScaler().fit_transform(trajs)
@@ -191,6 +219,12 @@ class TrajectoryContrastiveSuite:
         return model
 
     def test(self, model, test_dataloader) -> Tuple[float, float]:
+        """
+        Tests the model on the given test data
+        @param model: Trained autoencoder
+        @param test_dataloader: Test data
+        @return: Loss (used for training) and MSE loss
+        """
         model.eval()
 
         test_losses = []
@@ -222,6 +256,12 @@ class TrajectoryContrastiveSuite:
         return test_loss, test_mse
 
     def try_transform(self, model: nn.Module, traj: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """
+        Applies trained autoencoder to given trajectory
+        @param model: Trained autoencoder
+        @param traj: Trajectory to transform
+        @return: Tuple of decoded trajectory, dynamic components and conserved quantities
+        """
         x = torch.tensor(traj, dtype=torch.float32).to(self.device)
         embedding = model.encoder(x)
         decoded = model.decoder(x)
@@ -231,6 +271,12 @@ class TrajectoryContrastiveSuite:
 
     def try_transform_num(self, model: nn.Module, random_seed: Optional[int] = 42) -> Tuple[
         np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        """
+        Applies trained autoencoder to trajectory from experiment data
+        @param model: Trained autoencoder
+        @param random_seed: Seed for trajectory generation
+        @return: Tuple of trajectory, decoded trajectory, dynamic components and conserved quantities
+        """
         traj = self.experiment.single_trajectory(random_seed)
         res = self.try_transform(model, traj)
         return traj, *res
