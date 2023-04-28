@@ -19,7 +19,7 @@ def pendulum_animator(traj: np.ndarray):
     L = width // 3
     r = width // 10
 
-    for i in range(0, 1000, step):
+    for i in range(0, traj.shape[0], step):
         alpha, _ = traj[i]
         im = Image.new('RGB', (width, width), color_1)
         draw = ImageDraw.Draw(im)
@@ -40,7 +40,7 @@ def harmonic_oscillator_animator(traj: np.ndarray):
 
     maxX = np.max(traj[:, 0])
 
-    for i in range(0, 1000, step):
+    for i in range(0, traj.shape[0], step):
         raw_x, _ = traj[i]
         x = raw_x * (width // 4) // maxX
 
@@ -61,7 +61,7 @@ def double_pendulum_animator(traj: np.ndarray):
     L = width // 3
     r = width // 20
 
-    for i in range(0, 1000, step):
+    for i in range(0, traj.shape[0], step):
         theta1, theta2, _, _ = traj[i]
         im = Image.new('RGB', (width, width), color_1)
         draw = ImageDraw.Draw(im)
@@ -84,7 +84,7 @@ def coupled_oscillator_animator(traj: np.ndarray):
 
     xMax = np.max(traj[:, 0])
 
-    for i in range(0, 1000, step):
+    for i in range(0, traj.shape[0], step):
         raw_x1, raw_x2, _, _ = traj[i]
         x1 = width // 4 + raw_x1 * (width // 4 - a) // xMax
         x2 = width * 3 // 4 + raw_x2 * (width // 4 - a) // xMax
@@ -117,7 +117,7 @@ def kepler_problem_animator(traj: np.ndarray):
     maxY = np.max(np.abs(traj[:, 1]))
     maxD = max(maxX, maxY)
 
-    for i in range(0, 1000, step):
+    for i in range(0, traj.shape[0], step):
         raw_x, raw_y, _, _ = traj[i]
         x = center + raw_x * (width // 2 - a) // maxD
         y = center + raw_y * (width // 2 - a) // maxD
