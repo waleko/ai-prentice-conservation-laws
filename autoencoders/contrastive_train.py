@@ -25,7 +25,7 @@ class TrajectoryContrastiveSuite:
                  device: Optional[str] = None,
                  batch_size: int = 512,
                  log_prefix: Optional[str] = None,
-                 apply_scaling: bool = True,
+                 apply_scaling: bool = False,
                  train_val_test_split: List[int] = None,
                  do_animate: bool = False,
                  early_stopping_threshold: Optional[float] = 1e-5,
@@ -93,19 +93,21 @@ class TrajectoryContrastiveSuite:
         self.early_stopping_threshold = early_stopping_threshold
         self.init_lr = init_lr
 
-    def train(self, traj_cnt: Optional[int] = None, traj_len: Optional[int] = None):
+    def train(self, traj_cnt: Optional[int] = None, traj_len: Optional[int] = None,
+              random_seed: Optional[int] = 42) -> nn.Module:
         """
         Trains the autoencoder with data from the experiment
         @param traj_cnt: Number of trajectories to use (default: all)
         @param traj_len: Number of points per trajectory (default: all)
+        @param random_seed: Random seed for trajectory generation
         @return: Trained autoencoder
         """
-        trajs = self.experiment.contrastive_data(traj_cnt, traj_len)
+        trajs = self.experiment.contrastive_data(traj_cnt, traj_len, random_seed)
         return self.train_traj_data(trajs)
 
     def __parse_data(self, x):
         p = default_collate(x).type(dtype=torch.float32).to(self.device)
-        return p[:, :1], p[:, 1:]
+        return p[:, 0], p[:, 1:]
 
     def train_traj_data(self, trajs: np.ndarray) -> nn.Module:
         """
@@ -143,7 +145,7 @@ class TrajectoryContrastiveSuite:
             wandb.log({f"contrastive_{self.full_exp_name}_animation": wandb.Video(fname)})
 
         # test
-        self.test(model, test_dataloader)
+        self.test_dl_(model, test_dataloader)
 
         return model
 
@@ -218,11 +220,32 @@ class TrajectoryContrastiveSuite:
                 break
         return model
 
-    def test(self, model, test_dataloader) -> Tuple[float, float]:
+    def test_num(self, model: nn.Module, traj_cnt: Optional[int] = None, traj_len: Optional[int] = None,
+                 random_seed: Optional[int] = 42) -> Tuple[float, float]:
+        """
+        Tests the model on a single trajectory
+        @param model: Trained autoencoder
+        @param random_seed: Random seed for trajectory generation
+        @return: Loss (used for training) and MSE loss
+        """
+        data = self.experiment.contrastive_data(traj_cnt, traj_len, random_seed)
+        return self.test(model, data)
+
+    def test(self, model: nn.Module, test_traj: np.ndarray) -> Tuple[float, float]:
         """
         Tests the model on the given test data
         @param model: Trained autoencoder
-        @param test_dataloader: Test data
+        @param test_traj: Test data
+        @return: Loss (used for training) and MSE loss
+        """
+        dl = DataLoader(test_traj, batch_size=self.batch_size, shuffle=True, collate_fn=self.__parse_data)
+        return self.test_dl_(model, dl)
+
+    def test_dl_(self, model: nn.Module, test_dataloader: DataLoader) -> Tuple[float, float]:
+        """
+        Tests the model on the given test data loader
+        @param model: Trained autoencoder
+        @param test_dataloader: Test data as dataloader
         @return: Loss (used for training) and MSE loss
         """
         model.eval()

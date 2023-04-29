@@ -65,11 +65,13 @@ class PhysExperiment:
             res.append(self.trajectory_animator(traj))
         return res
 
-    def contrastive_data(self, traj_cnt: Optional[int] = None, traj_len: Optional[int] = None) -> np.ndarray:
+    def contrastive_data(self, traj_cnt: Optional[int] = None, traj_len: Optional[int] = None,
+                         random_seed=None) -> np.ndarray:
         if traj_cnt is None:
             traj_cnt = self.traj_cnt
         if traj_len is None:
             traj_len = self.traj_len
+        np.random.seed(random_seed)
         data = self.data[
             np.tile(np.random.choice(self.traj_cnt, traj_cnt), traj_len),
             np.random.choice(self.traj_len, traj_cnt * traj_len)
