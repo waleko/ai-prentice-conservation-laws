@@ -287,7 +287,7 @@ class TrajectoryContrastiveSuite:
         """
         x = torch.tensor(traj, dtype=torch.float32).to(self.device)
         embedding = model.encoder(x)
-        decoded = model.decoder(x)
+        decoded = model.decoder(embedding)
         return decoded.detach().cpu().numpy(), \
             embedding[:, :self.experiment.n_eff].detach().cpu().numpy(), \
             embedding[:, self.experiment.n_eff:].detach().cpu().numpy()
