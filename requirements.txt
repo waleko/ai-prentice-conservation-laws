@@ -11,3 +11,4 @@ ipython
 ipywidgets==7.7.2
 wandb
 ffmpeg
+pytorch-metric-learning

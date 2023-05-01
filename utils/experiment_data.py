@@ -1,8 +1,6 @@
 import logging
 from typing import Optional
 
-import numpy as np
-from PIL import Image
 from ipywidgets import widgets
 
 from .data_loader import *
@@ -67,17 +65,20 @@ class PhysExperiment:
             res.append(self.trajectory_animator(traj))
         return res
 
-    def contrastive_data(self, max_size: Optional[int] = None) -> np.ndarray:
-        """
-        TODO
-        @return:
-        """
-        points = self.data.reshape(self.traj_cnt * self.traj_len, self.pt_dim)
-        indices = np.tile(np.arange(self.traj_cnt)[:, None], (1, self.traj_len)).reshape(-1, 1)
-        data = np.concatenate((indices, points), axis=1)
-        if max_size is not None:
-            data = data[:max_size]
-        return data
+    def contrastive_data(self, traj_cnt: Optional[int] = None, traj_len: Optional[int] = None,
+                         random_seed=None) -> np.ndarray:
+        if traj_cnt is None:
+            traj_cnt = self.traj_cnt
+        if traj_len is None:
+            traj_len = self.traj_len
+        np.random.seed(random_seed)
+        data = self.data[
+            np.tile(np.random.choice(self.traj_cnt, traj_cnt), traj_len),
+            np.random.choice(self.traj_len, traj_cnt * traj_len)
+        ]
+        points = data.reshape(-1, self.pt_dim)
+        indices = np.tile(np.arange(traj_cnt)[:, None], (1, traj_len)).reshape(-1, 1)
+        return np.concatenate((indices, points), axis=1)
 
 
 class CsvPhysExperiment(PhysExperiment):
@@ -96,3 +97,27 @@ def ipython_show_gif(filename: str):
         value=image,
         format='gif'
     )
+
+
+def get_npz_data(filename: str, preprocess, count: int = 200, sample_size: int = 1000):
+    raw_data = np.load(f"trajectories/{filename}.npz")
+    raw_data, params = raw_data["data"], raw_data["params"]
+    if preprocess is None:
+        data, raw_data = raw_data, raw_data
+    else:
+        data = preprocess(raw_data)
+    flatten_data = data.reshape(data.shape[0], data.shape[1], -1)
+    return flatten_data[:count, :sample_size], params[:count]
+
+
+class NpzPhysExperiment(PhysExperiment):
+    def __init__(self, experiment_name: str, n_conservation_laws: int, traj_cnt: int = 200,
+                 traj_len: int = 1000, column_names: Union[List[str], None] = None,
+                 plot_config: Optional[List[Tuple[int, int]]] = None, start_index: int = 0,
+                 trajectory_animator: Optional[Callable] = None, filename: Optional[str] = None,
+                 preprocess: Optional[Callable[[np.ndarray], np.ndarray]] = None):
+        if filename is None:
+            filename = experiment_name
+        data, params = get_npz_data(filename, preprocess, traj_cnt, traj_len)
+        super().__init__(experiment_name, n_conservation_laws, data, column_names, plot_config, trajectory_animator)
+        self.params = params
