@@ -1,5 +1,5 @@
 import numpy as np
-from .auxiliary_functions import *
+from auxiliary_functions import *
 
 
 def energy(state):
