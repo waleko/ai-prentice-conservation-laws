@@ -76,7 +76,7 @@ class PhysExperiment:
         # indices = np.random.choice(self.traj_cnt, traj_cnt, replace=False) # fixme: bring back random
         indices = np.arange(traj_cnt)
         data = self.data[
-            np.tile(indices, traj_len),
+            np.repeat(indices, traj_len),
             np.random.choice(self.traj_len, traj_cnt * traj_len)
         ]
         points = data.reshape(-1, self.pt_dim)

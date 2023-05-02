@@ -161,20 +161,32 @@ class TrajectoryContrastiveSuite:
         for epoch in tqdm(range(self.epochs)):
             train_losses = []
             train_mse_losses = []
+            train_crit_losses = []
+            train_add_losses = []
+            train_contr_losses = []
 
             valid_losses = []
             valid_mse_losses = []
+            valid_crit_losses = []
+            valid_add_losses = []
+            valid_contr_losses = []
 
             model.train()
             for labels, inp in train_dataloader:
                 embedding = model.encoder(inp)
                 output = model.decoder(embedding)
 
-                loss = self.criterion(inp, output) + \
-                       self.additional_loss(inp, output, model) + \
-                       self.contrastive_loss(embedding[:, self.experiment.n_eff:], labels)
+                crit_loss = self.criterion(inp, output)
+                add_loss = self.additional_loss(inp, output, model)
+                contrastive_loss = self.contrastive_loss(embedding[:, self.experiment.n_eff:], labels)
+
+                loss = crit_loss + add_loss + contrastive_loss
+
                 train_losses.append(loss.item())
                 train_mse_losses.append(self.mse_criterion(inp, output).item())
+                train_crit_losses.append(crit_loss.item())
+                train_add_losses.append(add_loss.item())
+                train_contr_losses.append(contrastive_loss.item())
 
                 loss.backward()
                 optimizer.step()
@@ -185,11 +197,17 @@ class TrajectoryContrastiveSuite:
                 embedding = model.encoder(inp)
                 output = model.decoder(embedding)
 
-                loss = self.criterion(inp, output) + \
-                       self.additional_loss(inp, output, model) + \
-                       self.contrastive_loss(embedding[:, self.experiment.n_eff:], labels)
+                crit_loss = self.criterion(inp, output)
+                add_loss = self.additional_loss(inp, output, model)
+                contrastive_loss = self.contrastive_loss(embedding[:, self.experiment.n_eff:], labels)
+
+                loss = crit_loss + add_loss + contrastive_loss
+
                 valid_losses.append(loss.item())
                 valid_mse_losses.append(self.mse_criterion(inp, output).item())
+                valid_crit_losses.append(crit_loss.item())
+                valid_add_losses.append(add_loss.item())
+                valid_contr_losses.append(contrastive_loss.item())
 
             train_loss = np.average(train_losses)
             valid_loss = np.average(valid_losses)
@@ -201,6 +219,13 @@ class TrajectoryContrastiveSuite:
             wandb.log({f"contrastive_{self.full_exp_name}_train_mse_loss": train_mse_loss})
             wandb.log({f"contrastive_{self.full_exp_name}_val_mse_loss": valid_mse_loss})
             wandb.log({f"contrastive_{self.full_exp_name}_lr": optimizer.param_groups[0]['lr']})
+
+            wandb.log({f"contrastive_{self.full_exp_name}_train_crit": np.average(train_crit_losses)})
+            wandb.log({f"contrastive_{self.full_exp_name}_train_add": np.average(train_add_losses)})
+            wandb.log({f"contrastive_{self.full_exp_name}_train_contrastive": np.average(train_contr_losses)})
+            wandb.log({f"contrastive_{self.full_exp_name}_valid_crit": np.average(valid_crit_losses)})
+            wandb.log({f"contrastive_{self.full_exp_name}_valid_add": np.average(valid_add_losses)})
+            wandb.log({f"contrastive_{self.full_exp_name}_valid_contrastive": np.average(valid_contr_losses)})
             scheduler.step()
 
             # animate
@@ -252,16 +277,25 @@ class TrajectoryContrastiveSuite:
 
         test_losses = []
         test_mse_losses = []
+        test_crit_losses = []
+        test_add_losses = []
+        test_contr_losses = []
 
         for labels, inp in test_dataloader:
             embedding = model.encoder(inp)
             output = model.decoder(embedding)
 
-            loss = self.criterion(inp, output) + \
-                   self.additional_loss(inp, output, model) + \
-                   self.contrastive_loss(embedding[:, self.experiment.n_eff:], labels)
+            crit_loss = self.criterion(inp, output)
+            add_loss = self.additional_loss(inp, output, model)
+            contrastive_loss = self.contrastive_loss(embedding[:, self.experiment.n_eff:], labels)
+
+            loss = crit_loss + add_loss + contrastive_loss
+
             test_losses.append(loss.item())
             test_mse_losses.append(self.mse_criterion(inp, output).item())
+            test_crit_losses.append(crit_loss.item())
+            test_add_losses.append(add_loss.item())
+            test_contr_losses.append(contrastive_loss.item())
 
         # traj_test_np = test_inp.detach().cpu().numpy()
         # output_np = output.detach().cpu().numpy()
@@ -273,6 +307,9 @@ class TrajectoryContrastiveSuite:
 
         wandb.log({f"contrastive_{self.full_exp_name}_test_loss": test_loss})
         wandb.log({f"contrastive_{self.full_exp_name}_test_mse": test_mse})
+        wandb.log({f"contrastive_{self.full_exp_name}_test_crit": np.average(test_crit_losses)})
+        wandb.log({f"contrastive_{self.full_exp_name}_test_add": np.average(test_add_losses)})
+        wandb.log({f"contrastive_{self.full_exp_name}_test_contrastive": np.average(test_contr_losses)})
         # wandb.log({f"{self.full_exp_name}_{bottleneck_dim}_test_metric_rank": test_metric_rank})
         # wandb.log({f"{self.full_exp_name}_{bottleneck_dim}_test_metric_mse_neighborhood": test_metric_mse_neighborhood})
 
