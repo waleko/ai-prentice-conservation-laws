@@ -10,6 +10,7 @@ from torch.utils.data import random_split
 from tqdm.autonotebook import tqdm
 
 from autoencoders.autoencoder import AE
+from experiments.animator import Animator
 from utils import PhysExperiment
 
 
@@ -86,8 +87,7 @@ class TrajectoryContrastiveSuite:
         self.train_val_test_split = train_val_test_split
         self.apply_scaling = apply_scaling
 
-        # self.animator = Animator(self.experiment, self.full_exp_name)
-        self.animator = None
+        self.animator = Animator(self.experiment, self.full_exp_name)
         self.do_animate = do_animate
 
         self.early_stopping_threshold = early_stopping_threshold
@@ -134,8 +134,8 @@ class TrajectoryContrastiveSuite:
         test_dataloader = DataLoader(traj_test, batch_size=self.batch_size, shuffle=True, collate_fn=self.__parse_data)
 
         if self.do_animate:
-            # todo
-            # self.animator.start(torch.tensor(trajs).to(self.device).float(), f"b{bottleneck_dim}")
+            self.animator.start(torch.tensor(self.experiment.single_trajectory(1)).to(self.device).float(),
+                                f"contrastive")
             pass
 
         model = self.__train_single(train_dataloader, valid_dataloader)
@@ -205,7 +205,7 @@ class TrajectoryContrastiveSuite:
 
             # animate
             if self.do_animate:
-                # self.animator.forward_and_log(model)
+                self.animator.forward_and_log(model)
                 pass
 
             # early stopping

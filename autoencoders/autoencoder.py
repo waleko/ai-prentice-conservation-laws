@@ -11,7 +11,7 @@ class AE(nn.Module):
             *[nn.Linear(intermediate_dim, intermediate_dim) if i % 2 == 0 else act_fn() for i in
               range(intermediate_layers * 2)],
             nn.Linear(intermediate_dim, hidden_dim),
-            act_fn(),
+            # act_fn(), # removed for contrastive learning with umap
         )
         self.decoder = nn.Sequential(
             nn.Linear(hidden_dim, intermediate_dim),
