@@ -1,4 +1,4 @@
-from typing import Optional, Tuple, List, Callable
+from typing import Optional, Tuple, List, Callable, Dict, Any
 
 import numpy as np
 import torch
@@ -30,7 +30,8 @@ class TrajectoryContrastiveSuite:
                  train_val_test_split: List[int] = None,
                  do_animate: bool = False,
                  early_stopping_threshold: Optional[float] = 1e-5,
-                 init_lr: float = 0.01
+                 init_lr: float = 0.01,
+                 optim_config: Optional[Dict[str, Any]] = None,
                  ):
         """
         A suite for training an autoencoder on a physical experiment with contrastive loss.
@@ -92,6 +93,7 @@ class TrajectoryContrastiveSuite:
 
         self.early_stopping_threshold = early_stopping_threshold
         self.init_lr = init_lr
+        self.optim_config = optim_config
 
     def train(self, traj_cnt: Optional[int] = None, traj_len: Optional[int] = None,
               random_seed: Optional[int] = 42) -> nn.Module:
@@ -155,7 +157,10 @@ class TrajectoryContrastiveSuite:
         optimizer = torch.optim.Adam(model.parameters(), lr=self.init_lr)
         # scheduler for lr change
         # todo: make configurable
-        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=self.epochs // 10, gamma=0.5)
+        optim_config = self.optim_config
+        if optim_config is None:
+            optim_config = {"step_size": self.epochs // 10, "gamma": 0.5}
+        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, **optim_config)
 
         counter = 0
         for epoch in tqdm(range(self.epochs)):

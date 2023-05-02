@@ -5,6 +5,7 @@ import numpy as np
 import torch
 from matplotlib import pyplot as plt, animation
 from torch import nn
+from tqdm.autonotebook import tqdm
 
 from utils import PhysExperiment
 
@@ -57,10 +58,13 @@ class Animator:
             x.set_xlabel(self.exp.column_names[j])
             x.set_ylabel(self.exp.column_names[k])
 
+        progress_bar = tqdm(total=len(self.frames), desc="Animating trajectories")
+
         def update_lines(num):
             for idx in range(N):
                 j, k = self.exp.plot_config[idx]
                 scatters[idx * 2 + 1].set_offsets(self.frames[num - 1][:, (j, k)]) # only orange
+            progress_bar.update()
             return scatters
 
         # Creating the Animation object
