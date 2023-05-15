@@ -1,5 +1,5 @@
 import numpy as np
-from .auxiliary_functions import *
+from auxiliary_functions import *
 
 
 def energy(state):
@@ -24,7 +24,7 @@ def create_trajectories(N_traj=200, traj_len=200, save=True):
 
     state0_generator = lambda: np.array([0, np.random.uniform(0, 2)])
 
-    data = np.array([generate_traj(derivative, state0_generator, energy, "absolute", 0.1, 10, traj_len=traj_len) for _ in tqdm(range(N_traj))])
+    data = np.array([generate_traj(derivative, state0_generator, energy, "absolute", 0.1, 100, traj_len=traj_len) for _ in tqdm(range(N_traj))])
     energies = np.array([energy(traj[0]) for traj in data])
 
     if save:

@@ -5,3 +5,4 @@ from .experiment_data import *
 from .scores import *
 from .metrics import *
 from .early_stopping import *
+from .graphs import *

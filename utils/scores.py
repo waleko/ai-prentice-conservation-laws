@@ -12,12 +12,16 @@ class OrderScore:
         argsorted = np.argsort(dist_matrix_[self.ref_traj])
         self.nearest_ind = argsorted[:, :k_nearest_]
         self.orders = np.array([np.arange(k_nearest_)] * n_reference)
-
-    def order_score(self, embed, output_metric="euclidean", p=1):
+    
+    def compute_scores(self, embed, output_metric="euclidean", p=1):
         embed_dist_matrix = squareform(pdist(embed, metric=output_metric))
         embedding_orders = np.argsort(np.argsort(embed_dist_matrix[self.ref_traj]))
         k_nearest_orders = np.array([orders[ind] for orders, ind in zip(embedding_orders, self.nearest_ind)])
-        return (np.abs(k_nearest_orders - self.orders) ** p).mean() ** (1 / p) / len(embed)
+        return (np.abs(k_nearest_orders - self.orders) ** p).mean(axis=1) ** (1 / p) / len(embed)
+    
+    def order_score(self, embed, output_metric="euclidean", p=1):
+        scores = self.compute_scores(embed, output_metric, p)
+        return scores.mean(), scores.std() / np.sqrt(len(scores))
 
 
 def order_scores(dist_matrix, UMAP_kwargs={"n_neighbors": 80}, n_dims_arr=np.arange(1, 7), n_reference=20, k_nearest=40, check_periodic_1d=True):

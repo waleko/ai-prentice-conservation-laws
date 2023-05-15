@@ -43,7 +43,7 @@ def angular_momentum(state):
     return state[0] * state[3] - state[1] * state[2]
 
 
-def create_trajectories(N_traj=200, traj_len=400, save=True, energy_interval=(-0.5, -0.15), momentum_interval=(0, 1), orientation_interval=(0, pi / 4)):
+def create_trajectories(N_traj=200, traj_len=500, save=True, energy_interval=(-0.5, -0.15), momentum_interval=(0, 1), orientation_interval=(0, pi / 4)):
     """
     Creates trajectories of kepler problem with different energies.
     Returns trajectories, energies, angular momentums and directions of Runge-Lenz vector
