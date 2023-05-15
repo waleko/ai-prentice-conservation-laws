@@ -3,6 +3,7 @@ from typing import Optional
 
 from ipywidgets import widgets
 
+from ai_prentice_wasserstein import DimensionalityPredictor
 from .data_loader import *
 
 
@@ -72,13 +73,31 @@ class PhysExperiment:
         if traj_len is None:
             traj_len = self.traj_len
         np.random.seed(random_seed)
+        # indices = np.random.choice(self.traj_cnt, traj_cnt, replace=False) # fixme: bring back random
+        indices = np.arange(traj_cnt)
         data = self.data[
-            np.tile(np.random.choice(self.traj_cnt, traj_cnt), traj_len),
+            np.repeat(indices, traj_len),
             np.random.choice(self.traj_len, traj_cnt * traj_len)
         ]
         points = data.reshape(-1, self.pt_dim)
-        indices = np.tile(np.arange(traj_cnt)[:, None], (1, traj_len)).reshape(-1, 1)
+        indices = np.tile(indices[:, None], (1, traj_len)).reshape(-1, 1)
         return np.concatenate((indices, points), axis=1)
+
+    def calc_umap_wd(self, traj_cnt: Optional[int] = None, traj_len: Optional[int] = None) -> Tuple[
+        np.ndarray, np.ndarray]:
+        """
+        Calculate UMAP embedding and Wasserstein distance matrix for the experiment
+        @param traj_cnt: Number of trajectories to use
+        @param traj_len: Number of points in each trajectory
+        @return: Returns tuple of UMAP embedding and Wasserstein distance matrix
+        """
+        if traj_cnt is None:
+            traj_cnt = self.traj_cnt
+        if traj_len is None:
+            traj_len = self.traj_len
+        predictor = DimensionalityPredictor(self.experiment_name)
+        predictor.fit(self.data[:traj_cnt, :traj_len])
+        return predictor.embeddings[self.n_conservation_laws], predictor.ws_distance_matrix
 
 
 class CsvPhysExperiment(PhysExperiment):
