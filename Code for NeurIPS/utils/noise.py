@@ -27,9 +27,10 @@ def plot_dimensionalities(ax, prentices, true_dim, strength_arr=np.linspace(0, 2
     @param strength_arr: Strengths of the noise
     @param max_strength: Maximum strength of the noise
     """
-    ax.scatter(strength_arr, [prentice.dimensionality for prentice in prentices], label="predicted dimensionality")
+    vals = [prentice.dimensionality for prentice in prentices]
+    ax.yaxis.set_ticks(range(min(vals), max(vals) + 1))
+    ax.scatter(strength_arr, vals, label="predicted dimensionality")
     ax.plot([0, max_strength], [true_dim, true_dim], label="true dimensionality", c="red")
-    ax.yaxis.get_major_locator().set_params(integer=True)
     ax.set_xlabel("strength of the noise")
     ax.set_ylabel("dimensionality")
     ax.legend()
