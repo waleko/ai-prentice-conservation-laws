@@ -1,4 +1,7 @@
-import utils
+from utils.dist_matrix import gen_dist_matrix
+from utils.scores import OrderScore
+from utils.metrics import circle_metric, normalize_angle, circle_metric_without_grad
+from utils.early_stopping import get_stop_point
 import umap
 from functools import partial
 from typing import Union
@@ -9,10 +12,9 @@ import matplotlib.cm as cm
 
 
 class DimensionalityPrentice:
-    def __init__(self, name: str, normalize: bool=True, beta: float=2.0, n_neighbors: Union[int, float]=0.5,
+    def __init__(self, normalize: bool=True, beta: float=2.0, n_neighbors: Union[int, float]=0.5,
                  n_reference: Union[int, float]=40, n_nearest: Union[int, float]=0.25, max_dim: int=6,
                  n_epochs_1d: int=20000, threshold: float=0.01, verbosity: int=1):
-        self.name = name
         self.normalize = normalize
         self.beta = beta
         self.n_neighbors = n_neighbors
@@ -44,12 +46,12 @@ class DimensionalityPrentice:
         if ws_distance_matrix is None:
             if self.verbosity:
                 print("Computing distance matrix")
-            ws_distance_matrix = utils.gen_dist_matrix(data, beta=self.beta)
+            ws_distance_matrix = gen_dist_matrix(data, beta=self.beta)
         self.ws_distance_matrix = ws_distance_matrix
         
         UMAP = partial(umap.UMAP, n_neighbors=self.n_neighbors, metric="precomputed")
         
-        self.OrderScore = utils.OrderScore(ws_distance_matrix, self.n_reference, self.n_nearest)
+        self.OrderScore = OrderScore(ws_distance_matrix, self.n_reference, self.n_nearest)
         self.embeddings = []
         self.scores = []
         self.errors = []
@@ -59,11 +61,11 @@ class DimensionalityPrentice:
         warnings.filterwarnings("ignore", message="using precomputed metric; inverse_transform will be unavailable")
         
         periodic_embedding = UMAP(n_components=1,
-                                  output_metric=utils.circle_metric,
+                                  output_metric=circle_metric,
                                   n_epochs=self.n_epochs_1d).fit_transform(ws_distance_matrix)
-        periodic_embedding = np.vectorize(utils.normalize_angle)(periodic_embedding)
+        periodic_embedding = np.vectorize(normalize_angle)(periodic_embedding)
         self.embeddings.append(periodic_embedding)
-        score, error = self.OrderScore.order_score(periodic_embedding, output_metric=utils.circle_metric_without_grad)
+        score, error = self.OrderScore.order_score(periodic_embedding, output_metric=circle_metric_without_grad)
         self.scores.append(score)
         self.errors.append(error)
         
@@ -79,4 +81,4 @@ class DimensionalityPrentice:
         
         if self.verbosity:
             print("Computing the dimensionality")
-        self.dimensionality = utils.get_stop_point(self.scores, self.threshold)
+        self.dimensionality = get_stop_point(self.scores, self.threshold)

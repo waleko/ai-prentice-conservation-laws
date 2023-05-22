@@ -43,7 +43,7 @@ def angular_momentum(state):
     return state[0] * state[3] - state[1] * state[2]
 
 
-def create_trajectories(N_traj=200, traj_len=500, save=True, energy_interval=(-0.5, -0.15), momentum_interval=(0, 1), orientation_interval=(0, pi / 4)):
+def create_trajectories(N_traj=200, traj_len=500, save=True, name="kepler_problem", energy_interval=(-0.5, -0.15), momentum_interval=(0, 1), orientation_interval=(0, pi / 4)):
     """
     Creates trajectories of kepler problem with different energies.
     Returns trajectories, energies, angular momentums and directions of Runge-Lenz vector
@@ -51,6 +51,7 @@ def create_trajectories(N_traj=200, traj_len=500, save=True, energy_interval=(-0
     @param N_traj: number of created trajectories
     @param traj_len: length of each trajectory
     @param save: whether to save trajectories and conserved quantities to trajectories/kepler_problem or not
+    @param name: name of the file where to save the results
     @param energy_interval: from that interval energies are sampled
     @param momentum_interval: from that interval angular momentums are sampled
     @param orientation_interval: from that interval directions of Runge-Lenz vectors are sampled
@@ -67,6 +68,6 @@ def create_trajectories(N_traj=200, traj_len=500, save=True, energy_interval=(-0
     data = np.array([single_trajectory(E, L, theta0, traj_len) for E, L, theta0 in tqdm(np.stack((energies, angular_momentums, thetas0), axis=1))])
 
     if save:
-        np.savez("../trajectories/kepler_problem.npz", data=data, params=np.stack((energies, angular_momentums, thetas0), axis=1))
+        np.savez(f"../trajectories/{name}.npz", data=data, params=np.stack((energies, angular_momentums, thetas0), axis=1))
 
     return data, energies, angular_momentums, thetas0

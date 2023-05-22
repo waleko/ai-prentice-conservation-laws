@@ -3,7 +3,6 @@ from typing import Optional
 
 from ipywidgets import widgets
 
-from ai_prentice_wasserstein import DimensionalityPredictor
 from .data_loader import *
 
 
@@ -91,6 +90,8 @@ class PhysExperiment:
         @param traj_len: Number of points in each trajectory
         @return: Returns tuple of UMAP embedding and Wasserstein distance matrix
         """
+        from ai_prentice_wasserstein import DimensionalityPredictor
+        
         if traj_cnt is None:
             traj_cnt = self.traj_cnt
         if traj_len is None:
