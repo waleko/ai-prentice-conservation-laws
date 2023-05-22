@@ -12,8 +12,8 @@ def fourth_order_runge_kutta(derivative: Callable[[np.ndarray], np.ndarray], sta
                              dt_max: float, T: float, k: float=1.2, max_deviation_threshold: float=0.01,
                              min_deviation_threshold: float=0.0001) -> Union[Tuple[List[np.ndarray], List[float]], None]:
     """
-    Generates uniformli distributed (with respect to the time) points on the trajectory
-    @param derivative: derivetive of the state with respect to time as a function of the state
+    Generates uniformly distributed (with respect to the time) points on the trajectory
+    @param derivative: derivative of the state with respect to time as a function of the state
     @param state0: start state
     @param conserved_quantity: conserved quantity as a function of the state, which is used to control accuracy of the Runge-Kutta algorithm
     @param deviation_type: type of the deviation of the conserved quantity, which is used to  control accuracy of the Runge-Kutta algorithm
@@ -68,8 +68,8 @@ def generate_traj(derivative: Callable[[np.ndarray], np.ndarray], state0_generat
                   conserved_quantity: Callable[[np.ndarray], float], deviation_type: Literal["absolute", "relative"], dt_max: float, T: float,
                   traj_len: int=200, max_deviation_threshold: float=1e-02, min_deviation_threshold: float=1e-04):
     """
-    Generates uniformli distributed (with respect to the time) points on the trajectory
-    @param derivative: derivetive of the state with respect to time as a function of the state
+    Generates uniformly distributed (with respect to the time) points on the trajectory
+    @param derivative: derivative of the state with respect to time as a function of the state
     @param state0_generator: function, which generates random start state
     @param conserved_quantity: conserved quantity as a function of the state, which is used to control accuracy of the Runge-Kutta algorithm
     @param deviation_type: type of the deviation of the conserved quantity, which is used to  control accuracy of the Runge-Kutta algorithm

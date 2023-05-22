@@ -12,6 +12,9 @@ def my_abs(x):
 
 @numba.njit()
 def normalize_angle(x, dim=2 * np.pi):
+    """
+    Helper function to normalize angle to [-pi, pi]
+    """
     while x > dim / 2:
         x -= dim
     while x < -dim / 2:
@@ -48,6 +51,9 @@ def circle_in_2d_metric(x, y):
 
 
 def circles_and_lines_metric(circles_dims):
+    """
+    Returns a metric for a space that is a product of circles and lines
+    """
     n = len(circles_dims)
     circles_dims = np.array(circles_dims)
     @numba.njit()

@@ -6,7 +6,8 @@ def gen_dist_matrix(X: np.ndarray, beta=2, name=None) -> np.ndarray:
     """
     Generates distance matrix by calculating Wasserstein distance
     @param X: Trajectories data
-    @param use_sinkhorn:
+    @param name: Suffix for saving the distance matrix to a file
+    @param beta: Wasserstein distance parameter (default: 2)
     @return: Distance matrix
     """
     weighted_data = np.array([np.array([np.array([1] + list(b)) for b in a]) for a in X])
