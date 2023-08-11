@@ -72,15 +72,15 @@ def plot_embedding_vs_conserved_quantity(ax, embedding, conserved_quantity, quan
     ax.set_ylabel("embedding")
 
 
-def plot_2d(fig, ax, embedding, conserved_quantity, quantity_name, i=1, j=2):
-    ax.scatter(*embedding.T, c=conserved_quantity)
-    ax.set_xlabel(f"embedding component {i}")
-    ax.set_ylabel(f"embedding component {j}")
+def plot_2d(fig, ax, data, c, c_name, i=1, j=2, plotted="embedding"):
+    ax.scatter(*data.T, c=c)
+    ax.set_xlabel(f"{plotted} component {i}")
+    ax.set_ylabel(f"{plotted} component {j}")
     sm = cm.ScalarMappable(cmap='viridis')
-    sm.set_array(conserved_quantity)
+    sm.set_array(c)
 
     fig.colorbar(sm, ax=ax)
-    ax.set_title(f"Colored by {quantity_name}")
+    ax.set_title(f"Colored by {c_name}")
 
 
 def plot_all_2d(fig, axes, embedding, conserved_quantities, quantities_names):
@@ -107,3 +107,29 @@ def choose_coordinates(embedding, quantities, n_coords=2):
                 best_coords = coords
         best_coordinates.append(best_coords)
     return best_coordinates
+
+
+def plot_dynamics(plt, data, true_dynamics, predicted_dynamics):
+    if true_dynamics.shape[1] == 1:
+        fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+        axes[0].scatter(true_dynamics, predicted_dynamics)
+        axes[0].set_xlabel("true dynamics")
+        axes[0].set_ylabel("predicted dynamics")
+        plot_2d(fig, axes[1], data[:, :2], predicted_dynamics.T[0], "predicted dynamics", plotted="data")
+        
+    elif true_dynamics.shape[1] == 2:
+        fig, axes = plt.subplots(3, 2, figsize=(12, 15))
+        for i in range(2):
+            for j in range(2):
+                axes[j, i].scatter(true_dynamics[:, j], predicted_dynamics[:, i])
+                axes[j, i].set_xlabel(f"true dynamics component #{j + 1}")
+                axes[j, i].set_ylabel(f"predicted dynamics component #{i + 1}")
+            plot_2d(fig, axes[2, i], true_dynamics, predicted_dynamics[:, i], f"predicted dynamics component #{i + 1}", plotted="true dynamics")
+
+    elif true_dynamics.shape[1] == 3:
+        pass
+    
+    else:
+        print("Not supported number of dynamical components")
+        
+    return fig, axes

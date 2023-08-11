@@ -17,7 +17,7 @@ def energy2(state):
     return (3 * (x1 - x2) ** 2 + (p1 - p2) ** 2) / 4
 
 
-def create_trajectories(N_traj=200, traj_len=200, save=True):
+def create_trajectories(N_traj=200, traj_len=200, save=True, E1_rng=(0, 1), E2_rng=(0, 1)):
     """
     Creates trajectories of coupled_oscillator with different energies.
     Returns trajectories and energies of two modes
@@ -30,11 +30,13 @@ def create_trajectories(N_traj=200, traj_len=200, save=True):
     @return energies1: energies of the first mode for each trajectory
     @return energies2: energies of the second mode for each trajectory
     """
-    energies1, energies2 = np.random.uniform(0, 1, size=(2, N_traj))
+    energies1 = np.random.uniform(*E1_rng, size=N_traj)
+    energies2 = np.random.uniform(*E2_rng, size=N_traj)
+
     A = np.sqrt(energies1)[:, None]
     B = np.sqrt(energies2)[:, None] / 2
 
-    t = np.sort(np.random.uniform(0, 100, size=(N_traj, traj_len)), axis=1)
+    t = np.sort(np.random.uniform(0, 10000, size=(N_traj, traj_len)), axis=1)
     
     x1_arr_mode1 = x2_arr_mode1 = cos(t) * A
     p1_arr_mode1 = p2_arr_mode1 = -sin(t) * A

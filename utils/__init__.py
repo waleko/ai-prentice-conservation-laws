@@ -7,3 +7,4 @@ from .metrics import *
 from .early_stopping import *
 from .graphs import *
 from .noise import *
+from .dynamics import *

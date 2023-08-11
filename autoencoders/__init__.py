@@ -5,3 +5,4 @@ from .contrastive_train import *
 from .external_metrics import *
 from .sparse import *
 from .train import *
+from .losses import *
