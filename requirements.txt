@@ -5,7 +5,7 @@ pandas
 matplotlib
 scipy
 scikit-learn
-umap
+umap-learn
 torch
 ipython
 ipywidgets==7.7.2
