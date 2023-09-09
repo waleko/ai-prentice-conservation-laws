@@ -6,7 +6,7 @@ def energy(state):
     return p ** 2 / 2 + x ** 2 / 2
 
 
-def create_trajectories(N_traj=200, traj_len=200, save=True):
+def create_trajectories(N_traj=200, traj_len=200, save=True, r_range=(0.2, 2)):
     """
     Creates trajectories of harmonic oscillator with different energies.
     Returns trajectories and energies
@@ -19,7 +19,7 @@ def create_trajectories(N_traj=200, traj_len=200, save=True):
     @return energies: energies of each trajectory
     """
     angles = 2 * np.pi * np.sort(np.random.uniform(size=(N_traj, traj_len)), axis=1)
-    radiuses = np.random.uniform(0, 1, size=N_traj)
+    radiuses = np.random.uniform(*r_range, size=N_traj)
     
     data = radiuses[:, None, None] * np.stack((np.cos(angles), np.sin(angles)), axis=2)
     energies = radiuses ** 2 / 2

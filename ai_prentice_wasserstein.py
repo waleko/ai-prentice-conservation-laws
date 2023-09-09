@@ -46,7 +46,7 @@ class DimensionalityPrentice:
         if ws_distance_matrix is None:
             if self.verbosity:
                 print("Computing distance matrix")
-            ws_distance_matrix = gen_dist_matrix(data, beta=self.beta)
+            ws_distance_matrix = gen_dist_matrix(data, beta=self.beta, verbosity=self.verbosity)
         self.ws_distance_matrix = ws_distance_matrix
         
         UMAP = partial(umap.UMAP, n_neighbors=self.n_neighbors, metric="precomputed")

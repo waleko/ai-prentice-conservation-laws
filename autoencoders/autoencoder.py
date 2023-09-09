@@ -22,7 +22,7 @@ class RegressionNN(nn.Module):
         self.f = nn.Sequential(
                 nn.Linear(input_dim, intermediate_dim),
                 act_fn(),
-                intermediate_layer * (intermediate_layers - 1)
+                intermediate_layer * (intermediate_layers - 1),
                 nn.Linear(intermediate_dim, output_dim),
                 *last_activation,
             )

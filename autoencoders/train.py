@@ -15,7 +15,7 @@ import copy
 
 from autoencoders.autoencoder import AE, JointAE, RegressionNN
 from autoencoders.external_metrics import mse_neighborhood_metric, ranks_metric
-from autoencoders.losses import default_loss
+from autoencoders.losses import MSELoss, CombinedLoss
 from experiments.animator import Animator
 import utils
 from utils import PhysExperiment, gen_dist_matrix
@@ -307,8 +307,8 @@ class JointAutoencoderSuite:
                  traj_len: int = 1000,
                  cons_epochs: int = 100,
                  ae_epochs: int = 200,
-                 criterion_conserved = default_loss,
-                 criterion_ae = default_loss,
+                 criterion_conserved = CombinedLoss(),
+                 criterion_ae = CombinedLoss(),
                  conserved_class=RegressionNN,
                  conserved_args=None,
                  joint_ae_class=JointAE,
@@ -357,7 +357,7 @@ class JointAutoencoderSuite:
 
         self.criterion_conserved = criterion_conserved
         self.criterion_ae = criterion_ae
-        self.mse_criterion = nn.MSELoss()
+        self.mse_criterion = MSELoss()
 
         self.batch_size = batch_size
 
@@ -413,12 +413,12 @@ class JointAutoencoderSuite:
         umap_embedding = self.umap_embedding(train)
         
         print("\nTraining conserved NN")
-        train_data = torch.tensor(flatten_trajectories(train), dtype=self.dtype)
+        train_data = torch.tensor(flatten_trajectories(train), dtype=self.dtype, requires_grad=True)
         cons_target = torch.tensor(np.repeat(StandardScaler().fit_transform(umap_embedding), train.shape[1], axis=0), dtype=self.dtype)
         conserved = self.train_conservation(train_data, cons_target)
         
         print("\nTraining joint AE")
-        valid_data = torch.tensor(flatten_trajectories(val), dtype=self.dtype)
+        valid_data = torch.tensor(flatten_trajectories(val), dtype=self.dtype, requires_grad=True)
         joint_ae = self.train_ae(train_data, valid_data, conserved)
         
         test_data = torch.tensor(flatten_trajectories(test), dtype=self.dtype)
@@ -494,13 +494,11 @@ def train_loop(
         batch_size,
         initial_lr,
         epochs,
-        criterion=default_loss,
-        valid_criterion=default_loss,
+        criterion=CombinedLoss(),
+        valid_criterion=MSELoss(),
         optimizer_class=torch.optim.Adam,
         valid_data=None,
         valid_target=None,
-        lam_l1=1e-5,
-        lam_l2=1e-5,
     ):
     dataloader = DataLoader(CustomDataset(train_data, train_target), batch_size=batch_size, shuffle=True)
     optimizer = optimizer_class(model.parameters(), lr=initial_lr)
@@ -509,15 +507,17 @@ def train_loop(
     if valid_data is None:
         valid_data = train_data
         valid_target = train_target
-    for epoch in trange(epochs):
+    for epoch in trange(epochs, ncols=100):
         for inputs, targets in dataloader:
             optimizer.zero_grad()
-            params = torch.concat([p.reshape(-1) for p in model.parameters()])
-            loss = criterion(model, inputs, targets) + lam_l1 * torch.abs(params).sum() + lam_l2 * (params ** 2).mean()
+            outputs = model(inputs)
+            loss = criterion(model, inputs, outputs, targets)
             loss.backward()
             optimizer.step()
-        train_loss = criterion(model, train_data, train_target)
-        valid_loss = valid_criterion(model, valid_data, valid_target)
+        train_outputs = model(train_data)
+        train_loss = criterion(model, train_data, train_outputs, train_target)
+        valid_outputs = model(valid_data)
+        valid_loss = valid_criterion(model, valid_data, valid_outputs, valid_target)
         valid_loss_log = f", Validation loss: {valid_loss}"
         if valid_loss < best_loss:
             best_loss = valid_loss

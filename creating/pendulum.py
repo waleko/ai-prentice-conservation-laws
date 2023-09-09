@@ -1,5 +1,5 @@
 import numpy as np
-from .auxiliary_functions import *
+from auxiliary_functions import *
 
 
 def energy(state):
@@ -7,7 +7,7 @@ def energy(state):
     return L ** 2 / 2 - np.cos(theta) + 1
 
 
-def create_trajectories(N_traj=200, traj_len=200, save=True, min_E = 0, max_E=2):
+def create_trajectories(N_traj=200, traj_len=200, save=True, v_range=(0.2, 2)):
     """
     Creates trajectories of pendulum with different energies.
     Returns trajectories and energies
@@ -21,8 +21,8 @@ def create_trajectories(N_traj=200, traj_len=200, save=True, min_E = 0, max_E=2)
     """
     def derivative(arr):
         return np.array([arr[1], -np.sin(arr[0])])
-
-    state0_generator = lambda: np.array([0, np.random.uniform(np.sqrt(2 * min_E), np.sqrt(2 * max_E))])
+    
+    state0_generator = lambda: np.array([0, np.random.uniform(*v_range)])
 
     data = np.array([generate_traj(derivative, state0_generator, energy, "absolute", 0.1, 100, traj_len=traj_len) for _ in tqdm(range(N_traj))])
     energies = np.array([energy(traj[0]) for traj in data])

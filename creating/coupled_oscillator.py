@@ -17,7 +17,7 @@ def energy2(state):
     return (3 * (x1 - x2) ** 2 + (p1 - p2) ** 2) / 4
 
 
-def create_trajectories(N_traj=200, traj_len=200, save=True, E1_rng=(0, 1), E2_rng=(0, 1)):
+def create_trajectories(N_traj=200, traj_len=200, save=True, E1_rng=(0.2, 2), E2_rng=(0.2, 2)):
     """
     Creates trajectories of coupled_oscillator with different energies.
     Returns trajectories and energies of two modes
