@@ -15,14 +15,10 @@ class RegressionNN(nn.Module):
         else:
             last_activation = ()
 
-        intermediate_layer = nn.Sequential(
-                nn.Linear(intermediate_dim, intermediate_dim),
-                act_fn(),
-            )
         self.f = nn.Sequential(
                 nn.Linear(input_dim, intermediate_dim),
                 act_fn(),
-                intermediate_layer * (intermediate_layers - 1),
+                *[nn.Linear(intermediate_dim, intermediate_dim) if i % 2 == 0 else act_fn() for i in range(2 * intermediate_layers - 2)],
                 nn.Linear(intermediate_dim, output_dim),
                 *last_activation,
             )
